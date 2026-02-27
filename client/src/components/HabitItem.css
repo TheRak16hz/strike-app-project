@@ -1,0 +1,441 @@
+.habit-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 1.5rem;
+  background: var(--surface);
+  border: 1px solid var(--border-light);
+  border-left: none; /* Removing static border in favor of gradient pseudo-element */
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  margin-bottom: 1rem;
+  position: relative;
+  overflow: hidden;
+}
+
+.habit-item::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 4px;
+  height: 100%;
+  background: linear-gradient(to bottom, var(--primary), var(--habit-color));
+  transition: opacity 0.3s;
+}
+
+.habit-item:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.habit-item.completed {
+  opacity: 0.9;
+  background: var(--bg-color);
+}
+
+.habit-item.completed::before {
+  opacity: 0.5;
+}
+
+.habit-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  width: 100%;
+}
+
+.habit-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+}
+
+.habit-title-group {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.habit-icon {
+  font-size: 1.5rem;
+  background: var(--bg-color);
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-light);
+}
+
+.habit-header h3 {
+  font-size: 1.25rem;
+  color: var(--text-primary);
+  margin: 0;
+  transition: color 0.3s;
+}
+
+.habit-item.completed .habit-header h3 {
+  text-decoration: line-through;
+  color: var(--text-secondary);
+}
+
+.habit-reminder-badge {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.8rem;
+  color: var(--primary);
+  background: color-mix(in srgb, var(--primary) 10%, transparent);
+  padding: 0.25rem 0.5rem;
+  border-radius: var(--radius-full);
+  width: max-content;
+  margin-top: -0.25rem;
+  margin-bottom: 0.5rem;
+}
+
+/* Barra de progreso para Todos los Hábitos */
+.habit-progress-bar-container {
+  width: 100%;
+  height: 24px;
+  background-color: var(--border-light);
+  border-radius: var(--radius-full);
+  position: relative;
+  overflow: hidden;
+  margin-top: 0.5rem;
+}
+
+.habit-progress-bar-fill {
+  height: 100%;
+  border-radius: var(--radius-full);
+  transition:
+    width 0.4s cubic-bezier(0.16, 1, 0.3, 1),
+    background-color 0.3s;
+}
+
+.habit-progress-text {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  text-shadow: 0 0 2px var(--surface);
+  white-space: nowrap;
+}
+
+.habit-item.completed .habit-progress-text {
+  color: white;
+  text-shadow: none;
+}
+
+/* Botones + / - Cuantificables */
+.quant-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: var(--bg-color);
+  padding: 0.25rem 0.5rem;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--border-light);
+}
+
+.quant-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-full);
+  background: var(--surface);
+  color: var(--text-secondary);
+  transition: all 0.2s;
+}
+
+.quant-btn:hover:not(:disabled) {
+  background: var(--habit-color);
+  color: white;
+}
+
+.quant-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.quant-btn.active {
+  background: var(--habit-color);
+  color: white;
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--habit-color) 40%, transparent);
+}
+
+.quant-value {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  min-width: 40px;
+  text-align: center;
+}
+
+/* Resto de estilos */
+.habit-description {
+  font-size: 0.95rem;
+  color: var(--text-secondary);
+  margin: 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.habit-bottom-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 0.5rem;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.stat-badge {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.streak-active {
+  color: #ff9800;
+  filter: drop-shadow(0 0 2px rgba(255, 152, 0, 0.4));
+}
+
+/* Mini Calendario Semanal */
+.mini-calendar {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.calendar-day {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.day-label {
+  font-size: 0.65rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.calendar-day.today .day-label {
+  color: var(--text-primary);
+  font-weight: 700;
+}
+
+.day-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  transition: all 0.3s;
+}
+
+.calendar-day.today .day-dot {
+  box-shadow:
+    0 0 0 2px var(--surface),
+    0 0 0 3px var(--text-primary);
+}
+
+/* Botón Expandir */
+.expand-btn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 0.25rem 0.5rem;
+  border-radius: var(--radius-sm);
+  transition: all 0.2s;
+}
+
+.expand-btn:hover {
+  background: var(--border-light);
+  color: var(--text-primary);
+}
+
+/* Gráfico de Actividad (Estilo GitHub) */
+.habit-calendar-extended {
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px dashed var(--border-light);
+  width: 100%;
+}
+
+.habit-calendar-extended h4 {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  margin-bottom: 1rem;
+  font-weight: 600;
+}
+
+.heatmap-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.heatmap-cell {
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+  transition:
+    transform 0.2s,
+    box-shadow 0.2s;
+  cursor: crosshair;
+}
+
+.heatmap-cell:hover {
+  transform: scale(1.3);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 10;
+  position: relative;
+}
+
+.heatmap-cell.active {
+  opacity: 0.85;
+}
+
+.heatmap-cell.active:hover {
+  opacity: 1;
+}
+
+.habit-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  margin-left: 1.5rem;
+  min-width: 48px;
+}
+
+.action-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-full);
+  transition: all 0.2s;
+  cursor: pointer;
+}
+
+.toggle-btn {
+  width: 3rem;
+  height: 3rem;
+  background: var(--surface);
+  border: 2px solid var(--border-light);
+  color: var(--border-light);
+}
+
+.toggle-btn:hover {
+  border-color: var(--habit-color);
+  color: var(--habit-color);
+}
+
+.toggle-btn.active {
+  background: var(--habit-color);
+  border-color: var(--habit-color);
+  color: white;
+  box-shadow: 0 4px 10px color-mix(in srgb, var(--habit-color) 40%, transparent);
+}
+
+/* Botón Hábito Inverso */
+.inverse-btn:hover {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+.inverse-btn.active {
+  background: var(--habit-color);
+  border-color: var(--habit-color);
+  color: white;
+  box-shadow: 0 4px 10px color-mix(in srgb, var(--habit-color) 40%, transparent);
+}
+
+.inverse-btn.active:hover {
+  background: var(--danger);
+  border-color: var(--danger);
+}
+
+.secondary-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  opacity: 0;
+  transform: translateX(10px);
+  transition: all 0.3s;
+}
+
+.habit-item:hover .secondary-actions {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.edit-btn,
+.delete-btn {
+  width: 2rem;
+  height: 2rem;
+  background: var(--bg-color);
+  color: var(--text-secondary);
+}
+
+.edit-btn:hover {
+  background: var(--primary);
+  color: white;
+}
+
+.delete-btn:hover {
+  background: var(--danger);
+  color: white;
+}
+
+/* Responsive */
+@media (max-width: 600px) {
+  .habit-item {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 1.25rem;
+  }
+
+  .habit-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .quant-controls {
+    align-self: flex-start;
+  }
+
+  .habit-actions {
+    flex-direction: row-reverse;
+    justify-content: space-between;
+    margin-left: 0;
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border-light);
+  }
+
+  .secondary-actions {
+    flex-direction: row;
+    opacity: 1;
+    transform: none;
+  }
+
+  .habit-bottom-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
