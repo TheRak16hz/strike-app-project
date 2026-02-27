@@ -1,8 +1,5 @@
-// En producción (Vercel), siempre usar la ruta relativa /api/auth
-// En desarrollo local (PC), usar localhost:5000 a menos que VITE_API_URL especifique otra cosa
-const API_URL = import.meta.env.PROD 
-  ? '/api/auth' 
-  : (import.meta.env.VITE_API_URL ? `${import.meta.env.VITE_API_URL}/api/auth` : 'http://localhost:5000/api/auth');
+const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+const API_URL = `${BASE_URL}/api/auth`; // Y en el otro archivo: /api/habits
 
 export const authService = {
   async register(username, password) {

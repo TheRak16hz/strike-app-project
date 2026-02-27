@@ -1,8 +1,5 @@
-// En producción (Vercel), siempre usar la ruta relativa /api
-// En desarrollo local (PC), usar localhost:5000 a menos que VITE_API_URL especifique otra cosa
-const API_URL = import.meta.env.PROD 
-  ? '/api' 
-  : (import.meta.env.VITE_API_URL ? `${import.meta.env.VITE_API_URL}/api` : 'http://localhost:5000/api');
+const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+const API_URL = `${BASE_URL}/api/auth`; // Y en el otro archivo: /api/habits
 
 const getHeaders = () => {
   const token = localStorage.getItem('strike_token');
@@ -14,7 +11,8 @@ const getHeaders = () => {
 
 export const habitService = {
   async getAll() {
-    const res = await fetch(`${API_URL}/habits`, {
+    // Se eliminó el /habits extra
+    const res = await fetch(API_URL, {
       headers: getHeaders()
     });
     if (!res.ok) throw new Error('Error fetching habits');
@@ -22,7 +20,8 @@ export const habitService = {
   },
 
   async create(habit) {
-    const res = await fetch(`${API_URL}/habits`, {
+    // Se eliminó el /habits extra
+    const res = await fetch(API_URL, {
       method: 'POST',
       headers: getHeaders(),
       body: JSON.stringify(habit)
@@ -32,7 +31,8 @@ export const habitService = {
   },
 
   async update(id, habit) {
-    const res = await fetch(`${API_URL}/habits/${id}`, {
+    // Se cambió a /${id}
+    const res = await fetch(`${API_URL}/${id}`, {
       method: 'PUT',
       headers: getHeaders(),
       body: JSON.stringify(habit)
@@ -42,7 +42,8 @@ export const habitService = {
   },
 
   async delete(id) {
-    const res = await fetch(`${API_URL}/habits/${id}`, {
+    // Se cambió a /${id}
+    const res = await fetch(`${API_URL}/${id}`, {
       method: 'DELETE',
       headers: getHeaders()
     });
@@ -51,7 +52,8 @@ export const habitService = {
   },
 
   async toggle(id, amount = undefined) {
-    const res = await fetch(`${API_URL}/habits/${id}/toggle`, {
+    // Se cambió a /${id}/toggle
+    const res = await fetch(`${API_URL}/${id}/toggle`, {
       method: 'POST',
       headers: getHeaders(),
       body: JSON.stringify({ amount })
