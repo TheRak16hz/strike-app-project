@@ -1,5 +1,5 @@
 const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-const API_URL = `${BASE_URL}/api/auth`; // Y en el otro archivo: /api/habits
+const API_URL = `${BASE_URL}/api/habits`;
 
 const getHeaders = () => {
   const token = localStorage.getItem('strike_token');
