@@ -2,22 +2,14 @@
   "version": 2,
   "builds": [
     {
-      "src": "client/package.json",
-      "use": "@vercel/vite"
-    },
-    {
-      "src": "server/index.js",
+      "src": "index.js",
       "use": "@vercel/node"
     }
   ],
   "routes": [
     {
-      "src": "/api/(.*)",
-      "dest": "/server/index.js"
-    },
-    {
       "src": "/(.*)",
-      "dest": "/client/$1"
+      "dest": "index.js"
     }
   ],
   "crons": [
