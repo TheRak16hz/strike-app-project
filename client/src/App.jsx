@@ -13,6 +13,7 @@ import './App.css';
 
 function Dashboard() {
   const [habits, setHabits] = useState([]);
+  const [filterType, setFilterType] = useState('all');
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingHabit, setEditingHabit] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -246,6 +247,34 @@ function Dashboard() {
     }
   };
 
+  const handleMove = async (id, direction) => {
+    if (filterType !== 'all') {
+      toast.error("Para reordenar, cambia el filtro a 'Todos'");
+      return;
+    }
+    const idx = habits.findIndex(h => h.id === id);
+    if (idx < 0) return;
+    
+    const newHabits = [...habits];
+    if (direction === 'up' && idx > 0) {
+      [newHabits[idx - 1], newHabits[idx]] = [newHabits[idx], newHabits[idx - 1]];
+    } else if (direction === 'down' && idx < habits.length - 1) {
+      [newHabits[idx + 1], newHabits[idx]] = [newHabits[idx], newHabits[idx + 1]];
+    } else {
+      return;
+    }
+    
+    setHabits(newHabits);
+    const orderPayload = newHabits.map((h, i) => ({ id: h.id, position: i }));
+    try {
+      await habitService.reorder(orderPayload);
+    } catch (err) {
+      console.error(err);
+      toast.error("Error al guardar orden");
+      loadHabits();
+    }
+  };
+
   const openEdit = (habit) => {
     setEditingHabit(habit);
     setIsFormOpen(true);
@@ -258,15 +287,16 @@ function Dashboard() {
     let totalCompleted = 0;
 
     habits.forEach(h => {
-      const target = h.is_quantifiable ? h.target_value : h.frequency_count;
+      const target = h.type === 'quantifiable' ? h.target_value : h.frequency_count;
       totalExpected += target;
       totalCompleted += Math.min(h.completedCountToday, target);
     });
 
-    return Math.round((totalCompleted / totalExpected) * 100);
+    return Math.round((totalCompleted / totalExpected) * 100) || 0;
   };
 
   const progressPercentage = calculateTotalProgress();
+  const filteredHabits = habits.filter(h => filterType === 'all' || h.type === filterType);
 
   return (
     <div className="app-container">
@@ -288,18 +318,30 @@ function Dashboard() {
       <main className="app-main">
         <div className="list-header animate-slide" style={{ animationDelay: '0.1s' }}>
           <h2>Mis Hábitos</h2>
-          <button 
-            className="btn-primary" 
-            onClick={() => { setEditingHabit(null); setIsFormOpen(true); }}
-          >
-            <Plus size={20} /> Nuevo
-          </button>
+          <div className="header-actions" style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+            <select 
+              value={filterType} 
+              onChange={(e) => setFilterType(e.target.value)}
+              style={{ padding: '0.5rem', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text-primary)' }}
+            >
+              <option value="all">Todos</option>
+              <option value="regular">✅ Regulares</option>
+              <option value="quantifiable">⚙️ Cuantificables</option>
+              <option value="inverse">🔄 Inversos</option>
+            </select>
+            <button 
+              className="btn-primary" 
+              onClick={() => { setEditingHabit(null); setIsFormOpen(true); }}
+            >
+              <Plus size={20} /> Nuevo
+            </button>
+          </div>
         </div>
 
         <div className="habits-list">
           {loading ? (
             <div className="loading-state">Cargando hábitos...</div>
-          ) : habits.length === 0 ? (
+          ) : filteredHabits.length === 0 ? (
             <div className="empty-state animate-scale glass-panel">
               <Activity size={48} color="var(--border-light)" />
               <h3>Aún no tienes hábitos</h3>
@@ -309,13 +351,15 @@ function Dashboard() {
               </button>
             </div>
           ) : (
-            habits.map((habit, index) => (
+            filteredHabits.map((habit, index) => (
               <div key={habit.id} style={{ animationDelay: `${0.1 + (index * 0.05)}s` }} className="animate-slide">
                 <HabitItem 
                   habit={habit}
                   onToggle={handleToggle}
                   onEdit={openEdit}
                   onDelete={handleDelete}
+                  onMove={(direction) => handleMove(habit.id, direction)}
+                  canMove={filterType === 'all'}
                 />
               </div>
             ))

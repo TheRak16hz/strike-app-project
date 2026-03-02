@@ -12,5 +12,6 @@ router.post('/', habitController.createHabit);
 router.put('/:id', habitController.updateHabit);
 router.delete('/:id', habitController.deleteHabit);
 router.post('/:id/toggle', habitController.toggleHabit);
+router.put('/reorder/all', habitController.reorderHabits);
 
 module.exports = router;

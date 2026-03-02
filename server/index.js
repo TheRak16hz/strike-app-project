@@ -4,11 +4,17 @@ require('dotenv').config();
 const habitRoutes = require('./routes/habits');
 const authRoutes = require('./routes/auth');
 
+const db = require('./db');
+
 const app = express();
 const PORT = process.env.PORT || 5000;
 
 app.use(cors());
 app.use(express.json());
+
+// Auto-migrate position column if it doesn't exist
+db.query('ALTER TABLE habits ADD COLUMN IF NOT EXISTS "position" INTEGER DEFAULT 0;')
+  .catch(err => console.error('Migration error:', err));
 
 // Endpoint de salud para que Render no se duerma
 app.get('/api/health', (req, res) => {

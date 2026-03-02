@@ -3,7 +3,7 @@ import { Check, Edit2, Trash2, Flame, Minus, Plus, ChevronDown, ChevronUp, Clock
 import PropTypes from 'prop-types';
 import './HabitItem.css';
 
-export default function HabitItem({ habit, onToggle, onEdit, onDelete }) {
+export default function HabitItem({ habit, onToggle, onEdit, onDelete, onMove, canMove }) {
   const [isExpanded, setIsExpanded] = useState(false);
   
   const { 
@@ -137,6 +137,16 @@ export default function HabitItem({ habit, onToggle, onEdit, onDelete }) {
       </div>
 
       <div className="habit-actions">
+        {canMove && (
+          <div className="move-actions" style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginRight: '8px' }}>
+            <button className="action-btn toggle-btn" onClick={() => onMove('up')} aria-label="Mover arriba" style={{ padding: '2px', minHeight: 'auto', background: 'transparent', color: 'var(--text-secondary)', border: '1px solid var(--border)' }}>
+              <ChevronUp size={18} />
+            </button>
+            <button className="action-btn toggle-btn" onClick={() => onMove('down')} aria-label="Mover abajo" style={{ padding: '2px', minHeight: 'auto', background: 'transparent', color: 'var(--text-secondary)', border: '1px solid var(--border)' }}>
+              <ChevronDown size={18} />
+            </button>
+          </div>
+        )}
         {!is_quantifiable && (
           <button 
             className={`action-btn toggle-btn ${is_inverse ? 'inverse-btn' : ''} ${isFullyCompleted ? 'active' : ''}`}
@@ -165,4 +175,6 @@ HabitItem.propTypes = {
   onToggle: PropTypes.func.isRequired,
   onEdit: PropTypes.func.isRequired,
   onDelete: PropTypes.func.isRequired,
+  onMove: PropTypes.func,
+  canMove: PropTypes.bool
 };

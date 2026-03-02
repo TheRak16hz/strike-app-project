@@ -2,10 +2,24 @@ const db = require('../db');
 
 exports.getHabits = async (req, res) => {
   try {
+    const timezone = req.headers['x-timezone'] || 'UTC';
+    const getLocalDateString = (d) => {
+      try {
+        const parts = new Intl.DateTimeFormat('en-CA', { timeZone: timezone }).formatToParts(d);
+        const year = parts.find(p => p.type === 'year').value;
+        const month = parts.find(p => p.type === 'month').value;
+        const day = parts.find(p => p.type === 'day').value;
+        return `${year}-${month}-${day}`;
+      } catch (e) {
+        return d.toISOString().split('T')[0];
+      }
+    };
+
     const today = new Date();
-    const todayStr = today.toISOString().split('T')[0];
+    const todayStr = getLocalDateString(today);
     
-    const habitsResult = await db.query('SELECT * FROM habits WHERE user_id = $1 ORDER BY created_at DESC', [req.user.id]);
+    // Agregamos order por position ASC primero
+    const habitsResult = await db.query('SELECT * FROM habits WHERE user_id = $1 ORDER BY position ASC, created_at DESC', [req.user.id]);
     const habits = habitsResult.rows;
     
     // Traer últimos 90 días para el calendario para no saturar memoria, sólo para los hábitos del usuario actual
@@ -67,7 +81,7 @@ exports.getHabits = async (req, res) => {
 
       // Fecha de creación para no contar racha antes de existir
       const createdDate = new Date(habit.created_at);
-      const createdDateStr = createdDate.toISOString().split('T')[0];
+      const createdDateStr = getLocalDateString(createdDate);
 
       // Cálculo de racha
       let currentStreak = 0;
@@ -85,13 +99,14 @@ exports.getHabits = async (req, res) => {
       
       // Recorremos hacia atrás
       while (streakActive && currentStreak < 3650) { // límite de seguridad
-        const dStr = checkDate.toISOString().split('T')[0];
+        const dStr = getLocalDateString(checkDate);
         
         if (dStr < createdDateStr) {
           break; // Límite alcanzado, no puede tener racha antes de la creación
         }
 
-        const dw = checkDate.getDay();
+        // Para obtener el día de la semana correcto según la zona horaria
+        const dw = new Date(dStr + 'T12:00:00Z').getDay();
         
         const isTarget = habit.frequency_type === 'specific_days' ? targetDaysArray.includes(dw) : true;
         
@@ -131,8 +146,8 @@ exports.getHabits = async (req, res) => {
         d.setDate(d.getDate() - 90);
         
         while (d <= endDate) {
-          const ds = d.toISOString().split('T')[0];
-          const dw = d.getDay();
+          const ds = getLocalDateString(d);
+          const dw = new Date(ds + 'T12:00:00Z').getDay();
           
           if (ds >= createdDateStr) {
             const isTarget = habit.frequency_type === 'specific_days' ? targetDaysArray.includes(dw) : true;
@@ -244,9 +259,22 @@ exports.deleteHabit = async (req, res) => {
 
 exports.toggleHabit = async (req, res) => {
   try {
+    const timezone = req.headers['x-timezone'] || 'UTC';
+    const getLocalDateString = (d) => {
+      try {
+        const parts = new Intl.DateTimeFormat('en-CA', { timeZone: timezone }).formatToParts(d);
+        const year = parts.find(p => p.type === 'year').value;
+        const month = parts.find(p => p.type === 'month').value;
+        const day = parts.find(p => p.type === 'day').value;
+        return `${year}-${month}-${day}`;
+      } catch (e) {
+        return d.toISOString().split('T')[0];
+      }
+    };
+
     const { id } = req.params;
     const { amount } = req.body; // para incrementos numéricos o romper rachas inversas
-    const today = new Date().toISOString().split('T')[0];
+    const today = getLocalDateString(new Date());
 
     const logCheck = await db.query(
       'SELECT * FROM habit_logs WHERE habit_id = $1 AND log_date = $2',
@@ -317,5 +345,25 @@ exports.toggleHabit = async (req, res) => {
   } catch (err) {
     console.error(err.message);
     res.status(500).json({ error: 'Error al registrar actividad' });
+  }
+};
+
+exports.reorderHabits = async (req, res) => {
+  try {
+    const { order } = req.body; 
+    // order is an array of objects: [{ id: 1, position: 0 }, { id: 2, position: 1 }]
+    if (!Array.isArray(order)) return res.status(400).json({ error: 'Invalid order format' });
+
+    // Use a transaction if possible, or just sequential updates
+    for (const item of order) {
+      await db.query(
+        'UPDATE habits SET position = $1 WHERE id = $2 AND user_id = $3',
+        [item.position, item.id, req.user.id]
+      );
+    }
+    res.json({ message: 'Order updated successfully' });
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).json({ error: 'Error reordering habits' });
   }
 };
