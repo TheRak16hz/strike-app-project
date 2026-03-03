@@ -185,10 +185,30 @@
   padding: 0.5rem;
   box-shadow: var(--shadow-md);
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(
+    5,
+    1fr
+  ); /* 5 por fila para mejor vista móvil/PC */
   gap: 0.25rem;
   z-index: 100;
   width: max-content;
+  max-width: 250px;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+/* Custom Scrollbar for Emoji Popup */
+.emoji-popup::-webkit-scrollbar {
+  width: 6px;
+}
+
+.emoji-popup::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.emoji-popup::-webkit-scrollbar-thumb {
+  background: var(--border-light);
+  border-radius: 10px;
 }
 
 .emoji-popup button {
@@ -211,7 +231,6 @@
     grid-template-columns: 1fr;
   }
 }
-
 
 /* Checkbox & Options */
 .checkbox-group {
@@ -290,7 +309,9 @@
 .color-option.selected {
   border-color: var(--text-primary);
   transform: scale(1.1);
-  box-shadow: 0 0 0 2px var(--bg-color), 0 0 0 4px var(--text-primary);
+  box-shadow:
+    0 0 0 2px var(--bg-color),
+    0 0 0 4px var(--text-primary);
 }
 
 /* Actions */

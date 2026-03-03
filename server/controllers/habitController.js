@@ -79,6 +79,18 @@ exports.getHabits = async (req, res) => {
         ? targetDaysArray.includes(dayOfWeek)
         : true; // daily o weekly asumimos cuenta para racha general
 
+      // Si el hábito es inverso y hoy falló (-1), la racha se rompe inmediatamente a 0
+      if (isInverse && completedCountToday === -1) {
+          return {
+            ...habit,
+            target_days: targetDaysArray,
+            isCompletedToday: false,
+            completedCountToday: 1, // visual
+            currentStreak: 0,
+            historyDates: [] // Generaremos esto igual debajo si es necesario, pero la racha es 0
+          };
+      }
+
       // Fecha de creación para no contar racha antes de existir
       const createdDate = new Date(habit.created_at);
       const createdDateStr = getLocalDateString(createdDate);
