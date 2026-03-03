@@ -185,16 +185,14 @@
   padding: 0.5rem;
   box-shadow: var(--shadow-md);
   display: grid;
-  grid-template-columns: repeat(
-    5,
-    1fr
-  ); /* 5 por fila para mejor vista móvil/PC */
+  grid-template-columns: repeat(5, 1fr); /* 5 por fila para mejor vista móvil/PC */
   gap: 0.25rem;
   z-index: 100;
-  width: max-content;
-  max-width: 250px;
+  width: 280px; /* Ensanchado para que quepan 5 sin problemas */
+  max-width: 90vw;
   max-height: 200px;
   overflow-y: auto;
+  overflow-x: hidden; /* Evitar barra horizontal oculta */
 }
 
 /* Custom Scrollbar for Emoji Popup */
