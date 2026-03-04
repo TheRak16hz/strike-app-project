@@ -26,22 +26,32 @@ export default function HabitItem({ habit, onToggle, onEdit, onDelete, onMove, c
 
   const progressPercentage = Math.min((completedCountToday / target) * 100, 100);
 
+  // Helper para arreglar zona horaria (UTC vs Local)
+  const getLocalDateString = (d) => {
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
   // Generar últimos 7 días para el mini-calendario
   const today = new Date();
   const last7Days = Array.from({ length: 7 }, (_, i) => {
     const d = new Date(today);
     d.setDate(today.getDate() - (6 - i));
     const isToday = i === 6;
-    const dateStr = d.toISOString().split('T')[0];
+    const dateStr = getLocalDateString(d);
     const isCompleted = historyDates && historyDates.includes(dateStr);
     const dayLabel = ['D','L','M','X','J','V','S'][d.getDay()];
-    return { dayLabel, isCompleted, isToday };
+    return { dayLabel, isCompleted, isToday, dateStr };
   });
-  // Generar próximos 90 días para el mapa de calor
-  const heatMapDays = Array.from({ length: 90 }, (_, i) => {
+  
+  // Generar últimos 30 días para el mapa de calor
+  const heatMapDays = Array.from({ length: 30 }, (_, i) => {
     const d = new Date(today);
-    d.setDate(today.getDate() + i);
-    const dateStr = d.toISOString().split('T')[0];
+    // Vamos hacia atrás: el índice 0 sería hace 29 días, el índice 29 sería hoy.
+    d.setDate(today.getDate() - (29 - i));
+    const dateStr = getLocalDateString(d);
     const isCompleted = historyDates && historyDates.includes(dateStr);
     return { dateStr, isCompleted };
   });
@@ -121,8 +131,13 @@ export default function HabitItem({ habit, onToggle, onEdit, onDelete, onMove, c
 
         {isExpanded && (
           <div className="habit-calendar-extended animate-slide">
-            <h4>Actividad (Próximos 90 días)</h4>
-            <div className="heatmap-grid">
+            <h4>Actividad (Últimos 30 días)</h4>
+            <div className="heatmap-grid" style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(15, 1fr)',
+              gap: '4px',
+              marginTop: '10px'
+            }}>
               {heatMapDays.map((day, idx) => (
                 <div 
                   key={idx} 

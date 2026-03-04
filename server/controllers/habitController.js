@@ -22,11 +22,11 @@ exports.getHabits = async (req, res) => {
     const habitsResult = await db.query('SELECT * FROM habits WHERE user_id = $1 ORDER BY position ASC, created_at DESC', [req.user.id]);
     const habits = habitsResult.rows;
     
-    // Traer últimos 90 días para el calendario para no saturar memoria, sólo para los hábitos del usuario actual
+    // Traer últimos 30 días para el calendario para no saturar memoria, sólo para los hábitos del usuario actual
     const logsResult = await db.query(
       `SELECT hl.* FROM habit_logs hl 
        JOIN habits h ON hl.habit_id = h.id 
-       WHERE h.user_id = $1 AND hl.log_date >= CURRENT_DATE - INTERVAL '90 days' 
+       WHERE h.user_id = $1 AND hl.log_date >= CURRENT_DATE - INTERVAL '30 days' 
        ORDER BY hl.log_date DESC`,
       [req.user.id]
     );
@@ -37,7 +37,10 @@ exports.getHabits = async (req, res) => {
       let targetDaysArray = [];
       try {
         if (habit.target_days) {
-          targetDaysArray = JSON.parse(habit.target_days);
+          const parsed = JSON.parse(habit.target_days);
+          if (Array.isArray(parsed)) {
+            targetDaysArray = parsed.map(Number).filter(n => !isNaN(n));
+          }
         }
       } catch (e) {
         targetDaysArray = [];
@@ -73,8 +76,9 @@ exports.getHabits = async (req, res) => {
         isCompletedToday = completedCountToday >= target;
       }
       
-      // Determinar si hoy es un día objetivo (target_day)
-      const dayOfWeek = today.getDay(); // 0=Sun, 1=Mon...
+      // Determinamos el día de la semana basándonos exclusivamente en hoy a mediodía (seguro)
+      const localTodayObj = new Date(todayStr + 'T12:00:00Z');
+      const dayOfWeek = localTodayObj.getDay(); // 0=Sun, 1=Mon...
       const isTargetDayToday = habit.frequency_type === 'specific_days' 
         ? targetDaysArray.includes(dayOfWeek)
         : true; // daily o weekly asumimos cuenta para racha general
@@ -97,29 +101,27 @@ exports.getHabits = async (req, res) => {
 
       // Cálculo de racha
       let currentStreak = 0;
-      let checkDate = new Date(today);
+      let checkDateObj = new Date(todayStr + 'T12:00:00Z');
       let streakActive = true;
       
       if (!isCompletedToday) {
         // empezamos a contar desde ayer
-        checkDate.setDate(checkDate.getDate() - 1);
+        checkDateObj.setDate(checkDateObj.getDate() - 1);
       } else {
         // Ya hizo lo de hoy, cuenta para la racha si hoy era target day
         if (isTargetDayToday) currentStreak++;
-        checkDate.setDate(checkDate.getDate() - 1);
+        checkDateObj.setDate(checkDateObj.getDate() - 1);
       }
       
       // Recorremos hacia atrás
       while (streakActive && currentStreak < 3650) { // límite de seguridad
-        const dStr = getLocalDateString(checkDate);
+        const dStr = checkDateObj.toISOString().split('T')[0];
         
         if (dStr < createdDateStr) {
           break; // Límite alcanzado, no puede tener racha antes de la creación
         }
 
-        // Para obtener el día de la semana correcto según la zona horaria
-        const dw = new Date(dStr + 'T12:00:00Z').getDay();
-        
+        const dw = checkDateObj.getDay();
         const isTarget = habit.frequency_type === 'specific_days' ? targetDaysArray.includes(dw) : true;
         
         const log = habitLogs.find(l => new Date(l.log_date).toISOString().split('T')[0] === dStr);
@@ -140,7 +142,7 @@ exports.getHabits = async (req, res) => {
           }
         }
         
-        checkDate.setDate(checkDate.getDate() - 1);
+        checkDateObj.setDate(checkDateObj.getDate() - 1);
       }
 
       // Generar historial de fechas para el calendario (Días cumplidos)
@@ -152,10 +154,10 @@ exports.getHabits = async (req, res) => {
           .filter(log => log.completed_count >= target)
           .map(log => new Date(log.log_date).toISOString().split('T')[0]));
       } else {
-        // Para INVERSOS, hay que iterar los últimos 90 días e ignorar donde haya un -1
+        // Para INVERSOS, hay que iterar los últimos 30 días e ignorar donde haya un -1
         const endDate = new Date(today);
         let d = new Date(today);
-        d.setDate(d.getDate() - 90);
+        d.setDate(d.getDate() - 30);
         
         while (d <= endDate) {
           const ds = getLocalDateString(d);
