@@ -421,6 +421,12 @@ exports.hardReset = async (req, res) => {
       [req.user.id]
     );
 
+    // Actualizar fecha de creación para resetear rachas (especialmente para inversos)
+    await db.query(
+      'UPDATE habits SET created_at = NOW() WHERE user_id = $1',
+      [req.user.id]
+    );
+
     res.json({ message: 'Todos los hábitos han sido reiniciados por completo' });
   } catch (err) {
     console.error(err.message);

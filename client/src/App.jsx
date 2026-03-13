@@ -10,6 +10,7 @@ import Header from './components/Header';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Settings from './pages/Settings';
+import { useTheme } from './hooks/useTheme';
 import './App.css';
 
 function Dashboard() {
@@ -405,6 +406,7 @@ const PrivateRoute = ({ children }) => {
 };
 
 export default function App() {
+  useTheme(); // Inicializar tema desde el componente raíz
   return (
     <>
       <Toaster position="bottom-right" toastOptions={{
