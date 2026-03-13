@@ -73,5 +73,23 @@ export const habitService = {
     });
     if (!res.ok) throw new Error('Error reordering habits');
     return res.json();
+  },
+
+  async reset(id) {
+    const res = await fetch(`${API_URL}/${id}/reset`, {
+      method: 'POST',
+      headers: getHeaders()
+    });
+    if (!res.ok) throw new Error('Error resetting habit');
+    return res.json();
+  },
+
+  async hardReset() {
+    const res = await fetch(`${API_URL}/hard-reset`, {
+      method: 'POST',
+      headers: getHeaders()
+    });
+    if (!res.ok) throw new Error('Error performing hard reset');
+    return res.json();
   }
 };
