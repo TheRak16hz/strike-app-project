@@ -1,11 +1,11 @@
 import { useState, useEffect, useContext } from 'react';
-import { Activity, LogOut, Moon, Sun, Bell, BellOff } from 'lucide-react';
-import { useTheme } from '../hooks/useTheme';
+import { Activity, Settings, Bell, BellOff } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 
 export default function Header() {
-  const { theme, toggleTheme } = useTheme();
-  const { user, logout } = useContext(AuthContext);
+  const { user } = useContext(AuthContext);
+  const navigate = useNavigate();
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
 
   useEffect(() => {
@@ -33,14 +33,6 @@ export default function Header() {
             <span style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
               Hola, <strong>{user.username}</strong>
             </span>
-            <button 
-              onClick={logout} 
-              className="theme-toggle" 
-              title="Cerrar Sessión"
-              style={{ color: 'var(--danger)' }}
-            >
-              <LogOut size={20} />
-            </button>
           </div>
         )}
         <button 
@@ -50,8 +42,13 @@ export default function Header() {
         >
           {notificationsEnabled ? <Bell size={20} /> : <BellOff size={20} />}
         </button>
-        <button onClick={toggleTheme} className="theme-toggle" aria-label="Cambiar tema">
-          {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
+        <button 
+          onClick={() => navigate('/settings')} 
+          className="theme-toggle" 
+          title="Ajustes"
+          aria-label="Ajustes"
+        >
+          <Settings size={20} />
         </button>
       </div>
     </header>

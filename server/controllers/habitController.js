@@ -381,3 +381,49 @@ exports.reorderHabits = async (req, res) => {
     res.status(500).json({ error: 'Error reordering habits' });
   }
 };
+
+exports.resetHabit = async (req, res) => {
+  try {
+    const timezone = req.headers['x-timezone'] || 'UTC';
+    const getLocalDateString = (d) => {
+      try {
+        const parts = new Intl.DateTimeFormat('en-CA', { timeZone: timezone }).formatToParts(d);
+        const year = parts.find(p => p.type === 'year').value;
+        const month = parts.find(p => p.type === 'month').value;
+        const day = parts.find(p => p.type === 'day').value;
+        return `${year}-${month}-${day}`;
+      } catch (e) {
+        return d.toISOString().split('T')[0];
+      }
+    };
+
+    const { id } = req.params;
+    const today = getLocalDateString(new Date());
+
+    await db.query(
+      'DELETE FROM habit_logs WHERE habit_id = $1 AND log_date = $2',
+      [id, today]
+    );
+
+    res.json({ message: 'Progreso de hoy reiniciado' });
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).json({ error: 'Error al reiniciar hábito' });
+  }
+};
+
+exports.hardReset = async (req, res) => {
+  try {
+    // Eliminar todos los logs de los hábitos que pertenecen a este usuario
+    await db.query(
+      `DELETE FROM habit_logs 
+       WHERE habit_id IN (SELECT id FROM habits WHERE user_id = $1)`,
+      [req.user.id]
+    );
+
+    res.json({ message: 'Todos los hábitos han sido reiniciados por completo' });
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).json({ error: 'Error al realizar hard reset' });
+  }
+};

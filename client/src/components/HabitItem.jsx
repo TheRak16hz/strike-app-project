@@ -1,9 +1,9 @@
 import { useState } from 'react';
-import { Check, Edit2, Trash2, Flame, Minus, Plus, ChevronDown, ChevronUp, Clock, XSquare } from 'lucide-react';
+import { Check, Edit2, Trash2, Flame, Minus, Plus, ChevronDown, ChevronUp, Clock, XSquare, RotateCcw } from 'lucide-react';
 import PropTypes from 'prop-types';
 import './HabitItem.css';
 
-export default function HabitItem({ habit, onToggle, onEdit, onDelete, onMove, canMove }) {
+export default function HabitItem({ habit, onToggle, onEdit, onDelete, onReset, onMove, canMove }) {
   const [isExpanded, setIsExpanded] = useState(false);
   
   const { 
@@ -173,6 +173,9 @@ export default function HabitItem({ habit, onToggle, onEdit, onDelete, onMove, c
         )}
         
         <div className="secondary-actions">
+          <button className="action-btn edit-btn" title="Reiniciar hoy" onClick={() => onReset(id)} aria-label="Reiniciar">
+            <RotateCcw size={16} />
+          </button>
           <button className="action-btn edit-btn" onClick={() => onEdit(habit)} aria-label="Editar">
             <Edit2 size={16} />
           </button>
@@ -190,6 +193,7 @@ HabitItem.propTypes = {
   onToggle: PropTypes.func.isRequired,
   onEdit: PropTypes.func.isRequired,
   onDelete: PropTypes.func.isRequired,
+  onReset: PropTypes.func.isRequired,
   onMove: PropTypes.func,
   canMove: PropTypes.bool
 };

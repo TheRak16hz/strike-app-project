@@ -9,6 +9,7 @@ import HabitForm from './components/HabitForm';
 import Header from './components/Header';
 import Login from './pages/Login';
 import Register from './pages/Register';
+import Settings from './pages/Settings';
 import './App.css';
 
 function Dashboard() {
@@ -209,6 +210,19 @@ function Dashboard() {
       }
     }
   };
+  
+  const handleReset = async (id) => {
+    if (window.confirm('¿Quieres reiniciar el progreso de hoy para este hábito?')) {
+      try {
+        await habitService.reset(id);
+        loadHabits();
+        toast.success('Hábito reiniciado');
+      } catch (err) {
+        console.error(err);
+        toast.error('Error al reiniciar hábito');
+      }
+    }
+  };
 
   const handleToggle = async (id, amount = undefined) => {
     try {
@@ -358,6 +372,7 @@ function Dashboard() {
                   onToggle={handleToggle}
                   onEdit={openEdit}
                   onDelete={handleDelete}
+                  onReset={handleReset}
                   onMove={(direction) => handleMove(habit.id, direction)}
                   canMove={filterType === 'all'}
                 />
@@ -407,6 +422,14 @@ export default function App() {
           element={
             <PrivateRoute>
               <Dashboard />
+            </PrivateRoute>
+          } 
+        />
+        <Route 
+          path="/settings" 
+          element={
+            <PrivateRoute>
+              <Settings />
             </PrivateRoute>
           } 
         />
