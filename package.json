@@ -1,0 +1,29 @@
+{
+  "name": "todo-strike-project",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "server": "npm run dev --prefix server",
+    "client": "npm run dev --prefix client",
+    "qr": "node scripts/show-qr.js",
+    "dev": "concurrently \"npm run server\" \"npm run client\" \"npm run qr\"",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/TheRak16hz/strike-app-project.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/TheRak16hz/strike-app-project/issues"
+  },
+  "homepage": "https://github.com/TheRak16hz/strike-app-project#readme",
+  "devDependencies": {
+    "concurrently": "^9.2.1",
+    "qrcode-terminal": "^0.12.0"
+  }
+}

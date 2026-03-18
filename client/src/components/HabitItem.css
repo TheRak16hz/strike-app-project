@@ -72,6 +72,24 @@
   border: 1px solid var(--border-light);
 }
 
+.habit-tags-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.habit-tag-badge {
+  padding: 0.2rem 0.6rem;
+  border-radius: 12px;
+  background: var(--primary-light);
+  color: var(--primary);
+  font-size: 0.7rem;
+  font-weight: 600;
+  border: 1px solid var(--primary-faint);
+}
+
 .habit-header h3 {
   font-size: 1.25rem;
   color: var(--text-primary);
@@ -400,6 +418,48 @@
 .delete-btn:hover {
   background: var(--danger);
   color: white;
+}
+
+/* Specific Styles for One-Time Tasks */
+.habit-item.is-task {
+  padding: 1.25rem 1.75rem;
+  border-left: 4px solid var(--habit-color);
+}
+
+.habit-item.is-task::before {
+  display: none; /* We use a cleaner solid border for tasks */
+}
+
+.habit-item.is-task .habit-header h3 {
+  font-size: 1.35rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.habit-item.is-task.completed {
+  background: color-mix(in srgb, var(--brand-green) 5%, var(--surface));
+  border-left-color: var(--brand-green);
+  opacity: 0.8;
+}
+
+.habit-item.is-task .habit-actions {
+  justify-content: center;
+}
+
+.task-check-btn {
+  transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
+}
+
+.task-check-btn:hover {
+  transform: scale(1.1);
+  background: var(--brand-green-light) !important;
+  color: var(--brand-green) !important;
+}
+
+.task-check-btn.active:hover {
+  transform: scale(0.95);
+  background: var(--brand-green) !important;
+  opacity: 0.9;
 }
 
 /* Responsive */

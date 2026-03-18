@@ -8,8 +8,8 @@ export default function HabitItem({ habit, onToggle, onEdit, onDelete, onReset, 
   
   const { 
     id, title, description, color, type,
-    target_value, unit, icon, reminder_time,
-    completedCountToday, currentStreak, historyDates 
+    target_value, unit, icon, reminder_time, reminder_date, tags,
+    completedCountToday, currentStreak, historyDates, is_one_time 
   } = habit;
   
   const is_quantifiable = type === 'quantifiable';
@@ -20,9 +20,11 @@ export default function HabitItem({ habit, onToggle, onEdit, onDelete, onReset, 
   const isFullyCompleted = completedCountToday >= target;
 
   // Textos
-  const progressText = is_quantifiable 
-    ? `${completedCountToday} / ${target} ${unit || ''}`
-    : is_inverse ? 'Automático' : `${completedCountToday} / ${target} HOY`;
+  const progressText = is_one_time 
+    ? (isFullyCompleted ? 'Completado' : 'Pendiente')
+    : is_quantifiable 
+      ? `${completedCountToday} / ${target} ${unit || ''}`
+      : is_inverse ? 'Automático' : `${completedCountToday} / ${target} HOY`;
 
   const progressPercentage = Math.min((completedCountToday / target) * 100, 100);
 
@@ -57,12 +59,12 @@ export default function HabitItem({ habit, onToggle, onEdit, onDelete, onReset, 
   });
 
   return (
-    <div className={`habit-item animate-slide ${isFullyCompleted ? 'completed' : ''}`} style={{ '--habit-color': color }}>
+    <div className={`habit-item animate-slide ${isFullyCompleted ? 'completed' : ''} ${is_one_time ? 'is-task' : ''}`} style={{ '--habit-color': color }}>
       <div className="habit-content">
         <div className="habit-header">
           <div className="habit-title-group">
-            <span className="habit-icon">{icon || '🎯'}</span>
-            <h3>{title}</h3>
+            <span className="habit-icon" style={is_one_time ? { fontSize: '1.5rem', width: '40px', height: '40px' } : {}}>{icon || (is_one_time ? '📝' : '🎯')}</span>
+            <h3 style={is_one_time ? { fontSize: '1.35rem', fontWeight: 700 } : {}}>{title}</h3>
           </div>
           
           {is_quantifiable && (
@@ -88,46 +90,67 @@ export default function HabitItem({ habit, onToggle, onEdit, onDelete, onReset, 
         </div>
         
         {description && <p className="habit-description">{description}</p>}
-        {reminder_time && (
+        {(reminder_time || reminder_date) && (
           <div className="habit-reminder-badge">
             <Clock size={12} />
-            <span>{reminder_time}</span>
+            <span>
+              {reminder_date && `${reminder_date.split('-').reverse().join('/')} `}
+              {reminder_time}
+            </span>
+          </div>
+        )}
+
+        {(tags || '').split(',').filter(Boolean).length > 0 && (
+          <div className="habit-tags-list">
+            {(tags || '').split(',').filter(Boolean).map(tag => (
+              <span key={tag} className="habit-tag-badge">{tag}</span>
+            ))}
           </div>
         )}
         
-        <div className="habit-progress-bar-container">
-          <div className="habit-progress-bar-fill" style={{ width: `${progressPercentage}%`, backgroundColor: color }}></div>
-          <span className="habit-progress-text">{progressText}</span>
-        </div>
+        {!is_one_time && (
+          <div className="habit-progress-bar-container">
+            <div className="habit-progress-bar-fill" style={{ width: `${progressPercentage}%`, backgroundColor: color }}></div>
+            <span className="habit-progress-text">{progressText}</span>
+          </div>
+        )}
         
-        <div className="habit-bottom-row">
-          <div className="stat-badge">
-            <Flame size={16} className={currentStreak > 0 ? 'streak-active' : ''} />
-            <span>{currentStreak} {currentStreak === 1 ? 'día' : 'días'} racha</span>
+        {is_one_time && (
+          <div style={{ marginTop: '0.5rem', fontSize: '0.85rem', color: isFullyCompleted ? 'var(--brand-green)' : 'var(--text-secondary)', fontWeight: 600 }}>
+            {isFullyCompleted ? '✅ Tarea finalizada' : '⭕ Pendiente de completar'}
           </div>
+        )}
+        
+        {!is_one_time && (
+          <div className="habit-bottom-row">
+            <div className="stat-badge">
+              <Flame size={16} className={currentStreak > 0 ? 'streak-active' : ''} />
+              <span>{currentStreak} {currentStreak === 1 ? 'día' : 'días'} racha</span>
+            </div>
 
-          <div className="mini-calendar">
-            {last7Days.map((day, idx) => (
-              <div 
-                key={idx} 
-                className={`calendar-day ${day.isCompleted ? 'completed' : ''} ${day.isToday ? 'today' : ''}`}
-                title={day.isToday ? 'Hoy' : ''}
-              >
-                <span className="day-label">{day.dayLabel}</span>
-                <div className="day-dot" style={{ backgroundColor: day.isCompleted ? color : 'var(--border-light)' }}></div>
-              </div>
-            ))}
+            <div className="mini-calendar">
+              {last7Days.map((day, idx) => (
+                <div 
+                  key={idx} 
+                  className={`calendar-day ${day.isCompleted ? 'completed' : ''} ${day.isToday ? 'today' : ''}`}
+                  title={day.isToday ? 'Hoy' : ''}
+                >
+                  <span className="day-label">{day.dayLabel}</span>
+                  <div className="day-dot" style={{ backgroundColor: day.isCompleted ? color : 'var(--border-light)' }}></div>
+                </div>
+              ))}
+            </div>
+            
+            <button 
+              className="expand-btn stat-badge" 
+              onClick={() => setIsExpanded(!isExpanded)}
+              aria-label={isExpanded ? 'Ocultar historial' : 'Ver historial'}
+            >
+              {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+              <span>{isExpanded ? 'Ocultar' : 'Ver más'}</span>
+            </button>
           </div>
-          
-          <button 
-            className="expand-btn stat-badge" 
-            onClick={() => setIsExpanded(!isExpanded)}
-            aria-label={isExpanded ? 'Ocultar historial' : 'Ver historial'}
-          >
-            {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-            <span>{isExpanded ? 'Ocultar' : 'Ver más'}</span>
-          </button>
-        </div>
+        )}
 
         {isExpanded && (
           <div className="habit-calendar-extended animate-slide">
@@ -162,7 +185,7 @@ export default function HabitItem({ habit, onToggle, onEdit, onDelete, onReset, 
             </button>
           </div>
         )}
-        {!is_quantifiable && (
+        {!is_one_time && !is_quantifiable && (
           <button 
             className={`action-btn toggle-btn ${is_inverse ? 'inverse-btn' : ''} ${isFullyCompleted ? 'active' : ''}`}
             onClick={() => onToggle(id)}
@@ -171,11 +194,32 @@ export default function HabitItem({ habit, onToggle, onEdit, onDelete, onReset, 
             {is_inverse && !isFullyCompleted ? <XSquare size={24} /> : <Check size={24} />}
           </button>
         )}
+
+        {is_one_time && (
+          <button 
+            className={`action-btn toggle-btn task-check-btn ${isFullyCompleted ? 'active' : ''}`}
+            onClick={() => onToggle(id)}
+            aria-label={isFullyCompleted ? 'Desmarcar tarea' : 'Marcar tarea'}
+            style={{ 
+              width: '50px', 
+              height: '50px', 
+              borderRadius: '15px',
+              background: isFullyCompleted ? 'var(--brand-green)' : 'var(--surface)',
+              border: `2px solid ${isFullyCompleted ? 'var(--brand-green)' : 'var(--border)'}`,
+              color: isFullyCompleted ? 'white' : 'var(--text-secondary)',
+              boxShadow: isFullyCompleted ? '0 4px 15px rgba(16, 185, 129, 0.3)' : 'none'
+            }}
+          >
+            <Check size={28} strokeWidth={3} />
+          </button>
+        )}
         
         <div className="secondary-actions">
-          <button className="action-btn edit-btn" title="Reiniciar hoy" onClick={() => onReset(id)} aria-label="Reiniciar">
-            <RotateCcw size={16} />
-          </button>
+          {!is_one_time && (
+            <button className="action-btn edit-btn" title="Reiniciar hoy" onClick={() => onReset(id)} aria-label="Reiniciar">
+              <RotateCcw size={16} />
+            </button>
+          )}
           <button className="action-btn edit-btn" onClick={() => onEdit(habit)} aria-label="Editar">
             <Edit2 size={16} />
           </button>

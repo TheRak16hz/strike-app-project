@@ -55,11 +55,34 @@ exports.getHabits = async (req, res) => {
       
       const isQuantifiable = habit.type === 'quantifiable';
       const isInverse = habit.type === 'inverse';
+      const isOneTime = habit.is_one_time;
       
-      // La meta de hoy depende del tipo
+      // Meta de hoy/siempre depende del tipo
       const target = isQuantifiable ? habit.target_value : habit.frequency_count;
       
       let completedCountToday = todayLog ? todayLog.completed_count : 0;
+
+      // Para tareas de UNA SOLA VEZ, si hay CUALQUIER log previo, ya cuenta como completado PARA SIEMPRE
+      if (isOneTime) {
+        const anyLog = habitLogs.length > 0;
+        return {
+          ...habit,
+          reminder_time: habit.reminder_time ? habit.reminder_time.substring(0, 5) : null,
+          reminder_date: habit.reminder_date ? new Date(habit.reminder_date).toISOString().split('T')[0] : null,
+          target_days: targetDaysArray,
+          isCompletedToday: anyLog,
+          completedCountToday: anyLog ? 1 : 0,
+          currentStreak: anyLog ? 1 : 0, // No tiene sentido la racha en tareas únicas
+          historyDates: habitLogs.map(l => {
+            try {
+              if (!l.log_date) return null;
+              return new Date(l.log_date).toISOString().split('T')[0];
+            } catch (e) {
+              return null;
+            }
+          }).filter(Boolean)
+        };
+      }
       let isCompletedToday = false;
 
       // Lógica de compleción del día actual según tipo
@@ -87,8 +110,9 @@ exports.getHabits = async (req, res) => {
       if (isInverse && completedCountToday === -1) {
           return {
             ...habit,
-            target_days: targetDaysArray,
-            isCompletedToday: false,
+          reminder_time: habit.reminder_time ? habit.reminder_time.substring(0, 5) : null,
+          reminder_date: habit.reminder_date ? new Date(habit.reminder_date).toISOString().split('T')[0] : null,
+          isCompletedToday: isCompletedToday,
             completedCountToday: 1, // visual
             currentStreak: 0,
             historyDates: [] // Generaremos esto igual debajo si es necesario, pero la racha es 0
@@ -179,6 +203,8 @@ exports.getHabits = async (req, res) => {
 
       return {
         ...habit,
+        reminder_time: habit.reminder_time ? habit.reminder_time.substring(0, 5) : null,
+        reminder_date: habit.reminder_date ? new Date(habit.reminder_date).toISOString().split('T')[0] : null,
         target_days: targetDaysArray,
         isCompletedToday,
         completedCountToday,
@@ -198,7 +224,7 @@ exports.createHabit = async (req, res) => {
   try {
     const { 
       title, description, frequency_type, frequency_count, color,
-      target_days, type, target_value, unit, icon, reminder_time
+      target_days, type, target_value, unit, icon, reminder_time, reminder_date
     } = req.body;
     
     const targetDaysStr = JSON.stringify(target_days || []);
@@ -210,11 +236,11 @@ exports.createHabit = async (req, res) => {
     
     const newHabit = await db.query(
       `INSERT INTO habits 
-      (user_id, title, description, frequency_type, frequency_count, color, target_days, type, target_value, unit, icon, reminder_time) 
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING *`,
+      (user_id, title, description, frequency_type, frequency_count, color, target_days, type, target_value, unit, icon, reminder_time, reminder_date, tags, is_one_time) 
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15) RETURNING *`,
       [
         req.user.id, title, description || '', frequency_type || 'daily', frequency_count || 1, color || 'var(--primary)',
-        targetDaysStr, finalType, target_value || 1, unit || '', icon || '🎯', reminder_time || null
+        targetDaysStr, finalType, target_value || 1, unit || '', icon || '🎯', reminder_time || null, reminder_date || null, req.body.tags || '', req.body.is_one_time || false
       ]
     );
     res.json(newHabit.rows[0]);
@@ -228,24 +254,13 @@ exports.updateHabit = async (req, res) => {
   try {
     const { id } = req.params;
     const { 
-      title, description, frequency_type, frequency_count, color,
-      target_days, type, target_value, unit, icon, reminder_time
+      title, description, color, type, frequency_type, frequency_count, 
+      target_days, target_value, unit, icon, reminder_time, reminder_date, tags, is_one_time 
     } = req.body;
-    
-    const targetDaysStr = JSON.stringify(target_days || []);
-    
-    let finalType = type || 'regular';
-    if (req.body.is_quantifiable === true) finalType = 'quantifiable';
 
     const updateHabit = await db.query(
-      `UPDATE habits SET 
-        title = $1, description = $2, frequency_type = $3, frequency_count = $4, color = $5,
-        target_days = $6, type = $7, target_value = $8, unit = $9, icon = $10, reminder_time = $11
-      WHERE id = $12 AND user_id = $13 RETURNING *`,
-      [
-        title, description, frequency_type, frequency_count, color,
-        targetDaysStr, finalType, target_value || 1, unit || '', icon || '🎯', reminder_time || null, id, req.user.id
-      ]
+      'UPDATE habits SET title = $1, description = $2, color = $3, type = $4, frequency_type = $5, frequency_count = $6, target_days = $7, target_value = $8, unit = $9, icon = $10, reminder_time = $11, reminder_date = $12, tags = $13, is_one_time = $14 WHERE id = $15 AND user_id = $16 RETURNING *',
+      [title, description, color, type, frequency_type, frequency_count, JSON.stringify(target_days), target_value, unit, icon, reminder_time || null, reminder_date || null, tags || '', is_one_time || false, id, req.user.id]
     );
     if (updateHabit.rows.length === 0) {
       return res.status(404).json({ msg: 'Hábito no encontrado o no autorizado' });
@@ -288,6 +303,7 @@ exports.toggleHabit = async (req, res) => {
 
     const { id } = req.params;
     const { amount } = req.body; // para incrementos numéricos o romper rachas inversas
+    console.log(`Intentando toggle en hábito/tarea ID: ${id}, amount: ${amount}`);
     const today = getLocalDateString(new Date());
 
     const logCheck = await db.query(
@@ -295,7 +311,7 @@ exports.toggleHabit = async (req, res) => {
       [id, today]
     );
 
-    const habitResult = await db.query('SELECT frequency_count, type, target_value FROM habits WHERE id = $1 AND user_id = $2', [id, req.user.id]);
+    const habitResult = await db.query('SELECT frequency_count, type, target_value, is_one_time FROM habits WHERE id = $1 AND user_id = $2', [id, req.user.id]);
     if (habitResult.rows.length === 0) {
       return res.status(404).json({ msg: 'Hábito no encontrado o no autorizado' });
     }

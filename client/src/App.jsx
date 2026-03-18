@@ -1,5 +1,5 @@
-import { useState, useEffect, useRef, useCallback, useContext } from 'react';
-import { Plus, Activity } from 'lucide-react';
+import { useState, useEffect, useRef, useCallback, useContext, useMemo } from 'react';
+import { Plus, Activity, Search, Tag, Filter } from 'lucide-react';
 import { Toaster, toast } from 'react-hot-toast';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { AuthContext } from './context/AuthContext';
@@ -19,9 +19,19 @@ function Dashboard() {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingHabit, setEditingHabit] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [activeTab, setActiveTab] = useState('habitos'); // 'habitos' o 'tareas'
+  const [selectedTag, setSelectedTag] = useState('all');
 
   const habitsRef = useRef(habits);
   const lastTriggeredTimeRef = useRef(null);
+
+  const getLocalDateString = (d) => {
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
 
   useEffect(() => {
     habitsRef.current = habits;
@@ -56,15 +66,21 @@ function Dashboard() {
 
     let hasTriggeredSomething = false;
 
-    // 1. Revisar Hábitos con hora específica (Reminder_time)
+    // 1. Revisar Hábitos/Tareas con hora específica
     habitsRef.current.forEach(h => {
       const target = h.type === 'quantifiable' ? h.target_value : h.frequency_count;
       const isPending = h.completedCountToday < target;
       
-      // Chequear si es la hora y asegurarnos de truncar los segundos (HH:MM:SS de Postgres a HH:MM)
+      const currentTimeObj = new Date();
+      const currentDateStr = getLocalDateString(currentTimeObj);
+      
+      // Chequear si es la hora
       const hReminder = h.reminder_time ? h.reminder_time.substring(0, 5) : null;
       
-      if (isPending && hReminder === currentTimeStr) {
+      // Si tiene fecha, solo notificar ese día. Si no, notificar diario (hábitos).
+      const dateMatches = !h.reminder_date || h.reminder_date === currentDateStr;
+
+      if (isPending && hReminder === currentTimeStr && dateMatches) {
         hasTriggeredSomething = true;
         // Enviar in-app toast notification
         toast(
@@ -157,7 +173,9 @@ function Dashboard() {
         console.log('Hábito pospuesto 15 minutos.');
       }
     };
-    navigator.serviceWorker.addEventListener('message', handleServiceWorkerMessage);
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.addEventListener('message', handleServiceWorkerMessage);
+    }
 
     // Revisión por minuto para alarmas (Midiendo cada 10 segundos)
     const interval = setInterval(() => {
@@ -169,7 +187,9 @@ function Dashboard() {
 
     return () => {
       clearInterval(interval);
-      navigator.serviceWorker.removeEventListener('message', handleServiceWorkerMessage);
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.removeEventListener('message', handleServiceWorkerMessage);
+      }
     };
   }, [checkNotificationStatus, registerServiceWorker, checkReminders]);
 
@@ -295,55 +315,156 @@ function Dashboard() {
     setIsFormOpen(true);
   };
 
-  const calculateTotalProgress = () => {
-    if (habits.length === 0) return 0;
-    
-    let totalExpected = 0;
-    let totalCompleted = 0;
+  const { habitProgress, taskProgress } = useMemo(() => {
+    const habitItems = habits.filter(h => !h.is_one_time);
+    const taskItems = habits.filter(h => h.is_one_time);
 
+    const calculateProgress = (items) => {
+      if (items.length === 0) return 0;
+      let totalGoals = 0;
+      let totalCompleted = 0;
+
+      items.forEach(h => {
+        if (h.type === 'inverse') {
+          totalGoals += 1;
+          totalCompleted += h.completedCountToday === 0 ? 1 : 0;
+        } else {
+          const goal = h.type === 'quantifiable' ? h.target_value : h.frequency_count;
+          totalGoals += goal;
+          totalCompleted += Math.min(h.completedCountToday, goal);
+        }
+      });
+      return Math.round((totalCompleted / totalGoals) * 100);
+    };
+
+    return {
+      habitProgress: calculateProgress(habitItems),
+      taskProgress: calculateProgress(taskItems)
+    };
+  }, [habits]);
+  
+  // Extract all unique tags from habits
+  const allTags = useMemo(() => {
+    const tagsSet = new Set();
     habits.forEach(h => {
-      const target = h.type === 'quantifiable' ? h.target_value : h.frequency_count;
-      totalExpected += target;
-      totalCompleted += Math.min(h.completedCountToday, target);
+      if (h.tags) {
+        h.tags.split(',').filter(Boolean).forEach(tag => tagsSet.add(tag));
+      }
     });
+    return Array.from(tagsSet).sort();
+  }, [habits]);
 
-    return Math.round((totalCompleted / totalExpected) * 100) || 0;
-  };
-
-  const progressPercentage = calculateTotalProgress();
-  const filteredHabits = habits.filter(h => filterType === 'all' || h.type === filterType);
+  const filteredHabits = habits.filter(habit => {
+    const matchesSearch = habit.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                          habit.description?.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesTag = selectedTag === 'all' || habit.tags?.split(',').includes(selectedTag);
+    const matchesTab = activeTab === 'habitos' ? !habit.is_one_time : habit.is_one_time;
+    
+    return matchesSearch && matchesTag && matchesTab;
+  });
 
   return (
     <div className="app-container">
       <Header />
-        
-      <div className="dashboard-card glass-panel">
-        <div className="stats-header">
-          <h2>Progreso Diario</h2>
-          <span className="stats-text">{progressPercentage}% del día completado</span>
+        <div className="dashboard-card glass-panel animate-scale">
+          <div className="stats-container">
+            {activeTab === 'habitos' ? (
+              <div className="stat-section animate-fade-in">
+                <div className="stats-header">
+                  <h2>Progreso de Hábitos</h2>
+                  <span className="stats-text">{habitProgress}% completado</span>
+                </div>
+                <div className="progress-bar-container">
+                  <div className="progress-bar-fill" style={{ width: `${habitProgress}%` }}></div>
+                </div>
+              </div>
+            ) : (
+              <div className="stat-section animate-fade-in">
+                <div className="stats-header">
+                  <h2>Progreso de Tareas</h2>
+                  <span className="stats-text" style={{ color: 'var(--brand-green)' }}>{taskProgress}% completado</span>
+                </div>
+                <div className="progress-bar-container">
+                  <div className="progress-bar-fill" style={{ width: `${taskProgress}%`, background: 'var(--brand-green)' }}></div>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
-        <div className="progress-bar-container">
-          <div 
-            className="progress-bar-fill" 
-            style={{ width: `${progressPercentage}%` }}
-          ></div>
-        </div>
-      </div>
 
       <main className="app-main">
-        <div className="list-header animate-slide" style={{ animationDelay: '0.1s' }}>
-          <h2>Mis Hábitos</h2>
-          <div className="header-actions" style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-            <select 
-              value={filterType} 
-              onChange={(e) => setFilterType(e.target.value)}
-              style={{ padding: '0.5rem', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text-primary)' }}
-            >
-              <option value="all">Todos</option>
-              <option value="regular">✅ Regulares</option>
-              <option value="quantifiable">⚙️ Cuantificables</option>
-              <option value="inverse">🔄 Inversos</option>
-            </select>
+        <div className="list-header animate-slide" style={{ animationDelay: '0.1s', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+            <h2>{activeTab === 'habitos' ? 'Mis Hábitos' : 'Mis Tareas'}</h2>
+            <div className="dashboard-tabs">
+              <button 
+                className={`tab-btn ${activeTab === 'habitos' ? 'active' : ''}`}
+                style={{ 
+                  background: activeTab === 'habitos' ? 'var(--primary)' : 'transparent', 
+                  border: 'none', padding: '0.4rem 0.8rem', cursor: 'pointer',
+                  borderRadius: '10px', fontSize: '0.9rem', fontWeight: 600, 
+                  color: activeTab === 'habitos' ? 'white' : 'var(--text-secondary)',
+                  transition: 'all 0.2s'
+                }}
+                onClick={() => setActiveTab('habitos')}
+              >
+                🔄 Hábitos
+              </button>
+              <button 
+                className={`tab-btn ${activeTab === 'tareas' ? 'active' : ''}`}
+                style={{ 
+                  background: activeTab === 'tareas' ? 'var(--primary)' : 'transparent', 
+                  border: 'none', padding: '0.4rem 0.8rem', cursor: 'pointer',
+                  borderRadius: '10px', fontSize: '0.9rem', fontWeight: 600, 
+                  color: activeTab === 'tareas' ? 'white' : 'var(--text-secondary)',
+                  transition: 'all 0.2s'
+                }}
+                onClick={() => setActiveTab('tareas')}
+              >
+                ✅ Tareas
+              </button>
+            </div>
+          </div>
+
+        <div className="header-actions" style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'center' }}>
+            <div className="search-bar">
+              <Search size={18} className="search-icon" />
+              <input 
+                type="text" 
+                placeholder="Buscar hábito..." 
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </div>
+            
+            {activeTab === 'habitos' && (
+              <div className="filter-group">
+                <Filter size={18} className="filter-icon" />
+                <select 
+                  value={filterType} 
+                  onChange={(e) => setFilterType(e.target.value)}
+                >
+                  <option value="all">Tipos: Todos</option>
+                  <option value="regular">✅ Regulares</option>
+                  <option value="quantifiable">⚙️ Cuantificables</option>
+                  <option value="inverse">🔄 Inversos</option>
+                </select>
+              </div>
+            )}
+
+            <div className="filter-group">
+              <Tag size={18} className="filter-icon" />
+              <select 
+                value={selectedTag} 
+                onChange={(e) => setSelectedTag(e.target.value)}
+              >
+                <option value="all">Etiquetas: Todas</option>
+                {allTags.map(tag => (
+                  <option key={tag} value={tag}>{tag}</option>
+                ))}
+              </select>
+            </div>
+
             <button 
               className="btn-primary" 
               onClick={() => { setEditingHabit(null); setIsFormOpen(true); }}
@@ -358,11 +479,15 @@ function Dashboard() {
             <div className="loading-state">Cargando hábitos...</div>
           ) : filteredHabits.length === 0 ? (
             <div className="empty-state animate-scale glass-panel">
-              <Activity size={48} color="var(--border-light)" />
-              <h3>Aún no tienes hábitos</h3>
-              <p>Comienza creando un hábito y no rompas tu racha.</p>
+              <Activity size={48} style={{ color: 'var(--border-light)', marginBottom: '1rem' }} />
+              <h3>{activeTab === 'habitos' ? 'Aún no tienes hábitos' : 'Aún no tienes tareas'}</h3>
+              <p>
+                {activeTab === 'habitos' 
+                  ? 'Comienza creando un hábito y no rompas tu racha.' 
+                  : 'Añade una tarea puntual para organizar tu día.'}
+              </p>
               <button className="btn-primary" onClick={() => setIsFormOpen(true)}>
-                Crear el primer hábito
+                {activeTab === 'habitos' ? 'Crear el primer hábito' : 'Crear la primera tarea'}
               </button>
             </div>
           ) : (
