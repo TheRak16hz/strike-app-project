@@ -9,6 +9,7 @@
 
   /* Brand Colors - Blue & Green */
   --primary: hsl(221, 83%, 53%); /* Vibrant Blue */
+  --primary-rgb: 37, 99, 235;
   --primary-hover: hsl(221, 83%, 45%);
   --brand-green: hsl(158, 64%, 42%); /* Emerald Green */
   --brand-green-hover: hsl(158, 64%, 35%);
@@ -34,6 +35,7 @@
   --border-light: hsl(216, 34%, 17%);
 
   --primary: hsl(217, 91%, 60%);
+  --primary-rgb: 60, 131, 246;
   --primary-hover: hsl(217, 91%, 65%);
   --brand-green: hsl(158, 64%, 50%);
 

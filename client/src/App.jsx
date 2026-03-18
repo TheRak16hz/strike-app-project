@@ -11,6 +11,7 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import Settings from './pages/Settings';
 import { useTheme } from './hooks/useTheme';
+import HabitRadarChart from './components/HabitRadarChart';
 import './App.css';
 
 function Dashboard() {
@@ -365,7 +366,7 @@ function Dashboard() {
 
   return (
     <div className="app-container">
-      <Header />
+      <Header habits={habits} onStatsClick={() => setActiveTab('stats')} />
         <div className="dashboard-card glass-panel animate-scale">
           <div className="stats-container">
             {activeTab === 'habitos' ? (
@@ -423,6 +424,19 @@ function Dashboard() {
               >
                 ✅ Tareas
               </button>
+              <button 
+                className={`tab-btn ${activeTab === 'stats' ? 'active' : ''}`}
+                style={{ 
+                  background: activeTab === 'stats' ? 'var(--primary)' : 'transparent', 
+                  border: 'none', padding: '0.4rem 0.8rem', cursor: 'pointer',
+                  borderRadius: '10px', fontSize: '0.9rem', fontWeight: 600, 
+                  color: activeTab === 'stats' ? 'white' : 'var(--text-secondary)',
+                  transition: 'all 0.2s'
+                }}
+                onClick={() => setActiveTab('stats')}
+              >
+                📊 Estadísticas
+              </button>
             </div>
           </div>
 
@@ -477,6 +491,29 @@ function Dashboard() {
         <div className="habits-list">
           {loading ? (
             <div className="loading-state">Cargando hábitos...</div>
+          ) : activeTab === 'stats' ? (
+            <div className="stats-tab-content animate-scale glass-panel" style={{ padding: '2.5rem', textAlign: 'center', display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+               <div className="stats-header-info">
+                 <h2 style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>Análisis Strike</h2>
+                 <p style={{ color: 'var(--text-secondary)' }}>Métricas de rendimiento en tiempo real</p>
+               </div>
+               
+               <HabitRadarChart habits={habits} />
+               
+               <div style={{ 
+                 marginTop: '1rem', 
+                 padding: '1.5rem', 
+                 background: 'rgba(var(--primary-rgb), 0.05)', 
+                 borderRadius: '20px', 
+                 border: '1px dashed var(--primary)', 
+                 textAlign: 'left',
+                 boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.02)'
+               }}>
+                <p style={{ margin: 0, fontSize: '0.9rem', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
+                  💡 <b>Consejo:</b> Tu hexágono refleja tu desempeño actual. La <b>Dedicación</b> mide tus completaciones de hoy, mientras que la <b>Disciplina</b> premia la constancia de tus rachas acumuladas. ¡Sigue así para expandir tu potencial!
+                </p>
+              </div>
+            </div>
           ) : filteredHabits.length === 0 ? (
             <div className="empty-state animate-scale glass-panel">
               <Activity size={48} style={{ color: 'var(--border-light)', marginBottom: '1rem' }} />

@@ -1,9 +1,10 @@
 import { useState, useEffect, useContext } from 'react';
-import { Activity, Settings, Bell, BellOff } from 'lucide-react';
+import PropTypes from 'prop-types';
+import { Activity, Settings, Bell, BellOff, BarChart3 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 
-export default function Header() {
+export default function Header({ habits, onStatsClick }) {
   const { user } = useContext(AuthContext);
   const navigate = useNavigate();
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
@@ -43,6 +44,14 @@ export default function Header() {
           {notificationsEnabled ? <Bell size={20} /> : <BellOff size={20} />}
         </button>
         <button 
+          onClick={onStatsClick} 
+          className="theme-toggle" 
+          title="Estadísticas"
+          aria-label="Estadísticas"
+        >
+          <BarChart3 size={20} />
+        </button>
+        <button 
           onClick={() => navigate('/settings')} 
           className="theme-toggle" 
           title="Ajustes"
@@ -54,3 +63,8 @@ export default function Header() {
     </header>
   );
 }
+
+Header.propTypes = {
+  habits: PropTypes.array,
+  onStatsClick: PropTypes.func
+};
