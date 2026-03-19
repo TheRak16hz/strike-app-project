@@ -106,8 +106,8 @@ app.get('/api/cron', async (req, res) => {
 });
 
 // Cualquier otra ruta no-API debe servir el index.html del frontend (SPA Fallback)
-// En Express 5+, se debe usar '/*' o '(.*)' en lugar de '*'
-app.get('/*', (req, res) => {
+// Usamos una expresión regular para atrapar todo lo que no sea una ruta de la API
+app.get(/^(?!\/api).+/, (req, res) => {
   res.sendFile(path.join(__dirname, '../client/dist/index.html'));
 });
 
