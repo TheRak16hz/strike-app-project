@@ -1,9 +1,8 @@
 /* App Core Styles */
 .app-header {
   display: flex;
-  flex-direction: column;
-  gap: 2rem;
-  margin-bottom: 1rem;
+  justify-content: space-between;
+  align-items: center;
 }
 
 .header-top {
@@ -19,8 +18,8 @@
 }
 
 .logo-group h1 {
-  font-size: 2rem;
-  font-weight: 700;
+  font-size: 1.25rem;
+  font-weight: 800;
   margin: 0;
   background: linear-gradient(135deg, var(--primary), var(--brand-green));
   -webkit-background-clip: text;
@@ -242,3 +241,42 @@
   color: var(--text-secondary);
   font-size: 1.1rem;
 }
+
+/* Finance Adaptive Grid */
+.finance-main-layout {
+  display: grid;
+  gap: 1rem;
+  align-items: start;
+  grid-template-areas: 
+    "flow dist goals"
+    "tx rates goals";
+  grid-template-columns: 1.2fr 1fr 1fr;
+}
+
+@media (max-width: 1100px) {
+  .finance-main-layout {
+    grid-template-areas: 
+      "flow dist"
+      "goals goals"
+      "tx rates";
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .finance-main-layout {
+    grid-template-areas: 
+      "flow"
+      "dist"
+      "tx"
+      "rates"
+      "goals";
+    grid-template-columns: 1fr;
+  }
+}
+
+.area-flow { grid-area: flow; }
+.area-dist { grid-area: dist; }
+.area-goals { grid-area: goals; }
+.area-tx { grid-area: tx; }
+.area-rates { grid-area: rates; }

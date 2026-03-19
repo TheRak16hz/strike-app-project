@@ -2,12 +2,15 @@ import { useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Sun, Moon, LogOut, ArrowLeft, RefreshCw } from 'lucide-react';
 import { useTheme } from '../hooks/useTheme';
+import { useNotifications } from '../hooks/useNotifications';
 import { AuthContext } from '../context/AuthContext';
 import { habitService } from '../services/habitService';
 import { toast } from 'react-hot-toast';
+import { Bell, BellOff } from 'lucide-react';
 
 export default function Settings() {
   const { theme, toggleTheme } = useTheme();
+  const { notificationsEnabled, toggleNotifications } = useNotifications();
   const { logout } = useContext(AuthContext);
   const navigate = useNavigate();
 
@@ -42,7 +45,7 @@ export default function Settings() {
           
           <section className="settings-section">
             <h3 style={{ marginTop: 0, marginBottom: '1rem', borderBottom: '1px solid var(--border-light)', paddingBottom: '0.5rem' }}>Personalización</h3>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
               <div>
                 <p style={{ margin: 0, fontWeight: 'bold' }}>Tema Visual</p>
                 <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Cambia entre modo claro y oscuro</p>
@@ -54,6 +57,29 @@ export default function Settings() {
               >
                 {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
                 {theme === 'dark' ? 'Modo Claro' : 'Modo Oscuro'}
+              </button>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <p style={{ margin: 0, fontWeight: 'bold' }}>Notificaciones</p>
+                <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Recordatorios de tus hábitos en el navegador</p>
+              </div>
+              <button 
+                onClick={toggleNotifications} 
+                className={`btn-primary ${!notificationsEnabled ? 'btn-secondary' : ''}`}
+                style={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: '0.5rem', 
+                  padding: '0.6rem 1.2rem',
+                  background: notificationsEnabled ? 'var(--primary)' : 'rgba(var(--primary-rgb), 0.1)',
+                  color: notificationsEnabled ? 'white' : 'var(--primary)',
+                  border: notificationsEnabled ? 'none' : '1px solid var(--primary)'
+                }}
+              >
+                {notificationsEnabled ? <Bell size={18} /> : <BellOff size={18} />}
+                {notificationsEnabled ? 'Activadas' : 'Desactivadas'}
               </button>
             </div>
           </section>

@@ -10,8 +10,11 @@ import Header from './components/Header';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Settings from './pages/Settings';
+import Finance from './pages/Finance';
 import { useTheme } from './hooks/useTheme';
+import { useNotifications } from './hooks/useNotifications';
 import HabitRadarChart from './components/HabitRadarChart';
+import MotivationalQuote, { getQuote } from './components/MotivationalQuote';
 import './App.css';
 
 function Dashboard() {
@@ -23,6 +26,8 @@ function Dashboard() {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState('habitos'); // 'habitos' o 'tareas'
   const [selectedTag, setSelectedTag] = useState('all');
+  const [showQuote, setShowQuote] = useState(true);
+  const { notificationsEnabled } = useNotifications();
 
   const habitsRef = useRef(habits);
   const lastTriggeredTimeRef = useRef(null);
@@ -55,7 +60,7 @@ function Dashboard() {
 
 
   const checkReminders = useCallback(() => {
-    if (Notification.permission !== 'granted' || habitsRef.current.length === 0) return;
+    if (!notificationsEnabled || Notification.permission !== 'granted' || habitsRef.current.length === 0) return;
     
     const now = new Date();
     const currentHour = now.getHours().toString().padStart(2, '0');
@@ -193,6 +198,15 @@ function Dashboard() {
       }
     };
   }, [checkNotificationStatus, registerServiceWorker, checkReminders]);
+
+  useEffect(() => {
+    const handleNewHabitEvent = () => {
+      setEditingHabit(null);
+      setIsFormOpen(true);
+    };
+    window.addEventListener('nav-action-new-habit', handleNewHabitEvent);
+    return () => window.removeEventListener('nav-action-new-habit', handleNewHabitEvent);
+  }, []);
 
   // (Estas funciones ya fueron subidas y envueltas más arriba en el componente)
 
@@ -343,8 +357,17 @@ function Dashboard() {
       taskProgress: calculateProgress(taskItems)
     };
   }, [habits]);
-  
-  // Extract all unique tags from habits
+
+  const activeProgress = activeTab === 'habitos' ? habitProgress : taskProgress;
+  const currentQuote = useMemo(() => {
+    if (!showQuote) return null;
+    return getQuote(activeProgress, new Date().getHours());
+  }, [activeProgress, showQuote]);
+
+  const handleCloseQuote = () => {
+    setShowQuote(false);
+  };
+
   const allTags = useMemo(() => {
     const tagsSet = new Set();
     habits.forEach(h => {
@@ -366,7 +389,6 @@ function Dashboard() {
 
   return (
     <div className="app-container">
-      <Header habits={habits} onStatsClick={() => setActiveTab('stats')} />
         <div className="dashboard-card glass-panel animate-scale">
           <div className="stats-container">
             {activeTab === 'habitos' ? (
@@ -375,6 +397,7 @@ function Dashboard() {
                   <h2>Progreso de Hábitos</h2>
                   <span className="stats-text">{habitProgress}% completado</span>
                 </div>
+                {showQuote && <MotivationalQuote message={currentQuote} onClose={handleCloseQuote} />}
                 <div className="progress-bar-container">
                   <div className="progress-bar-fill" style={{ width: `${habitProgress}%` }}></div>
                 </div>
@@ -385,6 +408,7 @@ function Dashboard() {
                   <h2>Progreso de Tareas</h2>
                   <span className="stats-text" style={{ color: 'var(--brand-green)' }}>{taskProgress}% completado</span>
                 </div>
+                {showQuote && <MotivationalQuote message={currentQuote} onClose={handleCloseQuote} />}
                 <div className="progress-bar-container">
                   <div className="progress-bar-fill" style={{ width: `${taskProgress}%`, background: 'var(--brand-green)' }}></div>
                 </div>
@@ -582,22 +606,24 @@ export default function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route 
-          path="/" 
+          path="*" 
           element={
             <PrivateRoute>
-              <Dashboard />
+              <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+                <Header 
+                  onNewHabitClick={() => window.dispatchEvent(new CustomEvent('nav-action-new-habit'))}
+                  onFinanceAction={() => window.dispatchEvent(new CustomEvent('nav-action-finance'))}
+                />
+                <Routes>
+                  <Route path="/" element={<Dashboard />} />
+                  <Route path="/settings" element={<Settings />} />
+                  <Route path="/finance" element={<Finance />} />
+                  <Route path="*" element={<Navigate to="/" replace />} />
+                </Routes>
+              </div>
             </PrivateRoute>
           } 
         />
-        <Route 
-          path="/settings" 
-          element={
-            <PrivateRoute>
-              <Settings />
-            </PrivateRoute>
-          } 
-        />
-        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </>
   );
