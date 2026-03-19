@@ -33,11 +33,15 @@ export default function Finance() {
   
   const [rates, setRates] = useState({ BS: 54, COP: 4000, USDT: 1 });
 
+  const resetGoalForm = () => setNewGoal({ title: '', target_amount: '', deadline: '', color: 'var(--primary)', icon: '🎯' });
+  const resetTransForm = () => setNewTrans({ type: 'income', amount: '', currency: 'USD', category: 'General', source: '', description: '', date: new Date().toISOString().split('T')[0], goal_id: '' });
+
   useEffect(() => {
     fetchDataInitial();
 
     const handleFinanceEvent = () => {
       setEditingItem(null);
+      resetTransForm();
       setShowTransForm(true);
     };
     window.addEventListener('nav-action-finance', handleFinanceEvent);
@@ -149,34 +153,51 @@ export default function Finance() {
 
   const handleCreateOrUpdateGoal = async (e) => {
     e.preventDefault();
+    const cleanedGoal = {
+      ...newGoal,
+      target_amount: parseFloat(newGoal.target_amount) || 0,
+      current_amount: parseFloat(newGoal.current_amount) || 0
+    };
+
     try {
       if (editingItem?.type === 'goal') {
-        await financeService.updateGoal(editingItem.data.id, newGoal);
+        await financeService.updateGoal(editingItem.data.id, cleanedGoal);
         toast.success('Meta actualizada');
       } else {
-        await financeService.createGoal(newGoal);
+        await financeService.createGoal(cleanedGoal);
         toast.success('Meta creada');
       }
       setShowGoalForm(false);
       setEditingItem(null);
       fetchData();
-    } catch { toast.error('Error en la operación'); }
+    } catch (err) { 
+      console.error(err);
+      toast.error('Error en la operación'); 
+    }
   };
 
   const handleCreateOrUpdateTrans = async (e) => {
     e.preventDefault();
+    const cleanedTrans = {
+      ...newTrans,
+      amount: parseFloat(newTrans.amount) || 0
+    };
+
     try {
       if (editingItem?.type === 'transaction') {
-        await financeService.updateTransaction(editingItem.data.id, newTrans);
+        await financeService.updateTransaction(editingItem.data.id, cleanedTrans);
         toast.success('Transacción actualizada');
       } else {
-        await financeService.createTransaction(newTrans);
+        await financeService.createTransaction(cleanedTrans);
         toast.success('Transacción registrada');
       }
       setShowTransForm(false);
       setEditingItem(null);
       fetchData();
-    } catch { toast.error('Error en la operación'); }
+    } catch (err) {
+      console.error(err);
+      toast.error('Error en la operación');
+    }
   };
 
   const handleAdjustGoal = async (e) => {
@@ -244,7 +265,7 @@ export default function Finance() {
           <button className="theme-toggle" onClick={() => setShowRatesPanel(true)} title="Tasas">
             <RefreshCw size={20} />
           </button>
-          <button className="btn-primary" onClick={() => { setEditingItem(null); setShowGoalForm(true); }}>
+          <button className="btn-primary" onClick={() => { setEditingItem(null); resetGoalForm(); setShowGoalForm(true); }}>
             <Target size={18} /> Nueva Meta
           </button>
         </div>
