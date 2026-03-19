@@ -1,5 +1,6 @@
-const API_BASE = import.meta.env.VITE_API_URL || `http://${window.location.hostname}:5000`;
-const API_URL = `${API_BASE}/api/auth`; // Y en el otro archivo: /api/habits
+const API_BASE = import.meta.env.VITE_API_URL || 
+                (window.location.hostname === 'localhost' ? 'http://localhost:5000' : '');
+const API_URL = `${API_BASE}/api/auth`; 
 
 export const authService = {
   async register(username, password) {

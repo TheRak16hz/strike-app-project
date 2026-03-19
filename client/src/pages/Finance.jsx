@@ -318,9 +318,9 @@ export default function Finance() {
 
       <div className="finance-main-layout">
         {/* Gráfica 1: Flujo de Caja (7D) */}
-        <section className="glass-panel area-flow" style={{ padding: '1.2rem' }}>
+        <section className="glass-panel area-flow" style={{ padding: '1.2rem', minHeight: '250px' }}>
           <h3 style={{ margin: '0 0 1rem 0', fontSize: '1rem', fontWeight: 700 }}>Flujo de Caja (7D)</h3>
-          <div style={{ height: '180px', width: '100%' }}>
+          <div style={{ height: '180px', width: '100%', minWidth: 0 }}>
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={totals.timelineData}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />
@@ -335,9 +335,9 @@ export default function Finance() {
         </section>
 
         {/* Gráfica 2: Distribución (Pie) */}
-        <section className="glass-panel area-dist" style={{ padding: '1.2rem', textAlign: 'center' }}>
+        <section className="glass-panel area-dist" style={{ padding: '1.2rem', textAlign: 'center', minHeight: '250px' }}>
            <h3 style={{ fontSize: '0.9rem', marginBottom: '1rem' }}>Distribución</h3>
-           <div style={{ height: '140px' }}>
+           <div style={{ height: '140px', width: '100%', minWidth: 0 }}>
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie data={totals.distributionData} dataKey="value" innerRadius={45} outerRadius={60} paddingAngle={4}>

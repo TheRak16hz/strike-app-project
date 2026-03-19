@@ -1,4 +1,5 @@
-const API_BASE = import.meta.env.VITE_API_URL || `http://${window.location.hostname}:5000`;
+const API_BASE = import.meta.env.VITE_API_URL || 
+                (window.location.hostname === 'localhost' ? 'http://localhost:5000' : '');
 const API_URL = `${API_BASE}/api/habits`;
 
 const getHeaders = () => {
