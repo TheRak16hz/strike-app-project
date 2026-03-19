@@ -1,5 +1,6 @@
 const express = require('express');
 const cors = require('cors');
+const path = require('path');
 require('dotenv').config();
 const habitRoutes = require('./routes/habits');
 const authRoutes = require('./routes/auth');
@@ -70,14 +71,17 @@ db.query(`
   );
 `).catch(err => console.error('Migration error (user_settings):', err));
 
-// Endpoint de salud para que Render no se duerma
-app.get('/api/health', (req, res) => {
-    res.status(200).send('Servidor Despierto 🚀');
-});
-
 app.use('/api/auth', authRoutes);
 app.use('/api/habits', habitRoutes);
 app.use('/api/finance', financeRoutes);
+
+// Servir archivos estáticos del cliente (Vite dist) para producción/fallback
+app.use(express.static(path.join(__dirname, '../client/dist')));
+
+// Endpoint de salud 
+app.get('/api/health', (req, res) => {
+    res.status(200).send('Servidor Despierto 🚀');
+});
 
 // Vercel Cron Endpoint: Se ejecuta automáticamente 1 vez al día (00:00 UTC)
 app.get('/api/cron', async (req, res) => {
@@ -95,6 +99,11 @@ app.get('/api/cron', async (req, res) => {
     console.error('Error ejecutando cron manual:', error);
     res.status(500).send('Hubo un error al procesar el cron.');
   }
+});
+
+// Cualquier otra ruta no-API debe servir el index.html del frontend (SPA Fallback)
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, '../client/dist/index.html'));
 });
 
 if (process.env.NODE_ENV !== 'production') {
