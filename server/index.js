@@ -11,7 +11,11 @@ const db = require('./db');
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-app.use(cors());
+app.use(cors({
+  origin: '*', // En producción puedes cambiarlo por la URL de tu frontend
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'x-timezone']
+}));
 app.use(express.json());
 
 // Auto-migrate position column and tags column if they don't exist
@@ -102,7 +106,8 @@ app.get('/api/cron', async (req, res) => {
 });
 
 // Cualquier otra ruta no-API debe servir el index.html del frontend (SPA Fallback)
-app.get('*', (req, res) => {
+// En Express 5+, se debe usar '/*' o '(.*)' en lugar de '*'
+app.get('/*', (req, res) => {
   res.sendFile(path.join(__dirname, '../client/dist/index.html'));
 });
 
