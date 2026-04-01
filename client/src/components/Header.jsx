@@ -1,7 +1,7 @@
 import { useContext } from 'react';
 import PropTypes from 'prop-types';
 import { 
-  Activity, Settings, Bell, BellOff, Wallet, Home, Plus
+  Activity, Settings, Bell, BellOff, Wallet, Home, Plus, Dumbbell
 } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
@@ -59,6 +59,17 @@ export default function Header({ onNewHabitClick, onFinanceAction }) {
               }}
             >
               <Wallet size={16} /> Finanzas
+            </button>
+            <button 
+              onClick={() => navigate('/training')}
+              style={{ 
+                display: 'flex', alignItems: 'center', gap: '0.4rem', padding: '0.35rem 0.75rem', borderRadius: '8px',
+                background: location.pathname === '/training' ? 'var(--primary)' : 'transparent',
+                color: location.pathname === '/training' ? 'white' : 'var(--text-secondary)',
+                fontWeight: 600, fontSize: '0.85rem'
+              }}
+            >
+              <Dumbbell size={16} /> Gym
             </button>
           </nav>
         )}

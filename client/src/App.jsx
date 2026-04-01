@@ -11,6 +11,7 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import Settings from './pages/Settings';
 import Finance from './pages/Finance';
+import Training from './pages/Training';
 import { useTheme } from './hooks/useTheme';
 import { useNotifications } from './hooks/useNotifications';
 import HabitRadarChart from './components/HabitRadarChart';
@@ -618,6 +619,7 @@ export default function App() {
                   <Route path="/" element={<Dashboard />} />
                   <Route path="/settings" element={<Settings />} />
                   <Route path="/finance" element={<Finance />} />
+                  <Route path="/training" element={<Training />} />
                   <Route path="*" element={<Navigate to="/" replace />} />
                 </Routes>
               </div>

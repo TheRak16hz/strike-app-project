@@ -1,44 +1,71 @@
-import { useState, useEffect, useMemo } from 'react';
-import { 
-  TrendingUp, TrendingDown, Target,
-  Trash2, PiggyBank, X, RefreshCw, Edit2, ArrowLeftRight,
-  TrendingUp as TrendUp, DollarSign
-} from 'lucide-react';
-import { financeService } from '../services/financeService';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { toast } from 'react-hot-toast';
-import { 
-  PieChart, Pie, Tooltip, ResponsiveContainer, Cell, 
-  AreaChart, Area, XAxis, YAxis, CartesianGrid
-} from 'recharts';
+import { financeService } from '../services/financeService';
+
+// Tab components
+import FinanceOverview from './finance/FinanceOverview';
+import FinanceBudgets from './finance/FinanceBudgets';
+import FinanceRates from './finance/FinanceRates';
+
+// Header
+import FinanceHeader from '../components/finance/FinanceHeader';
+
+// Modals
+import TransactionFormModal from '../components/finance/modals/TransactionFormModal';
+import GoalFormModal from '../components/finance/modals/GoalFormModal';
+import GoalAdjustModal from '../components/finance/modals/GoalAdjustModal';
+import FinanceSettingsModal from '../components/finance/modals/FinanceSettingsModal';
+import MonthlyReportModal from '../components/finance/modals/MonthlyReportModal';
+
+const TABS = [
+  { key: 'overview', label: '💰 Finanzas', title: 'Dashboard financiero' },
+  { key: 'budgets', label: '📊 Presupuestos', title: 'Presupuestos mensuales por categoría' },
+  { key: 'rates', label: '💱 Tasas', title: 'Tasas de cambio y calculadora' },
+];
 
 export default function Finance() {
-  const [data, setData] = useState({ goals: [], transactions: [], settings: { exchange_rates: { BS: 54, COP: 4000, USDT: 1 } } });
+  const [data, setData] = useState({
+    goals: [],
+    transactions: [],
+    settings: {
+      exchange_rates: { usd_bs: 65, usd_bs_bcv: 45, usd_cop: 4000, bs_cop: 5 },
+      budgets: {},
+    },
+  });
   const [loading, setLoading] = useState(true);
-  
-  // Modals Visibility
+  const [activeTab, setActiveTab] = useState('overview');
+
+  // Modals
   const [showGoalForm, setShowGoalForm] = useState(false);
   const [showTransForm, setShowTransForm] = useState(false);
-  const [showRatesPanel, setShowRatesPanel] = useState(false);
   const [showAdjustModal, setShowAdjustModal] = useState(false);
-  
-  // Edit States
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [showReportModal, setShowReportModal] = useState(false);
+
+  // Edit states
   const [editingItem, setEditingItem] = useState(null);
   const [selectedGoal, setSelectedGoal] = useState(null);
   const [adjustType, setAdjustType] = useState('add');
 
-  // Form States
+  // Form states
   const [newGoal, setNewGoal] = useState({ title: '', target_amount: '', deadline: '', color: 'var(--primary)', icon: '💰' });
-  const [newTrans, setNewTrans] = useState({ type: 'income', amount: '', currency: 'USD', category: 'General', source: '', description: '', date: new Date().toISOString().split('T')[0], goal_id: '' });
+  const [newTrans, setNewTrans] = useState({
+    type: 'income', amount: '', currency: 'USD', category: 'Otros', source: '',
+    date: new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Caracas' })).toLocaleDateString('en-CA'),
+    goal_id: '',
+  });
   const [adjustData, setAdjustData] = useState({ amount: '', description: '', currency: 'USD' });
-  
-  const [rates, setRates] = useState({ BS: 54, COP: 4000, USDT: 1 });
+  const [rates, setRates] = useState({ usd_bs: 65, usd_bs_bcv: 45, usd_cop: 4000, bs_cop: 5 });
+  const [budgets, setBudgets] = useState({});
 
-  const resetGoalForm = () => setNewGoal({ title: '', target_amount: '', deadline: '', color: 'var(--primary)', icon: '🎯' });
-  const resetTransForm = () => setNewTrans({ type: 'income', amount: '', currency: 'USD', category: 'General', source: '', description: '', date: new Date().toISOString().split('T')[0], goal_id: '' });
+  const resetGoalForm = () => setNewGoal({ title: '', target_amount: '', deadline: '', color: 'var(--primary)', icon: '💰' });
+  const resetTransForm = () => setNewTrans({
+    type: 'income', amount: '', currency: 'USD', category: 'General', source: '', description: '',
+    date: new Date().toISOString().split('T')[0], goal_id: '',
+  });
 
   useEffect(() => {
     fetchDataInitial();
-
     const handleFinanceEvent = () => {
       setEditingItem(null);
       resetTransForm();
@@ -52,8 +79,9 @@ export default function Finance() {
     try {
       const res = await financeService.getFinanceData();
       setData(res);
-      if (res.settings?.exchange_rates) {
-        setRates(res.settings.exchange_rates);
+      if (res.settings) {
+        if (res.settings.exchange_rates) setRates(res.settings.exchange_rates);
+        if (res.settings.budgets) setBudgets(res.settings.budgets);
       }
     } catch {
       toast.error('Error al cargar datos financieros');
@@ -71,94 +99,151 @@ export default function Finance() {
     }
   };
 
-  const handleUpdateRates = async () => {
+  const handleUpdateSettings = async (newSettings) => {
     try {
-      const validRates = { ...rates };
-      Object.keys(validRates).forEach(k => { if(!validRates[k]) validRates[k] = 1; });
-      
-      await financeService.updateSettings({ exchange_rates: validRates });
-      toast.success('Tasas de cambio actualizadas');
-      setShowRatesPanel(false);
+      await financeService.updateSettings({ settings: newSettings });
+      setData(prev => ({ ...prev, settings: newSettings }));
+      if (newSettings.exchange_rates) setRates(newSettings.exchange_rates);
+      if (newSettings.budgets) setBudgets(newSettings.budgets);
+      toast.success('Ajustes guardados');
+      setShowSettingsModal(false);
       fetchData();
     } catch {
-      toast.error('Error al guardar tasas');
+      toast.error('Error al guardar ajustes');
     }
   };
 
+  // Save only rates (from Rates tab)
+  const handleSaveRates = async (newRates) => {
+    const newSettings = { ...data.settings, exchange_rates: newRates };
+    await handleUpdateSettings(newSettings);
+  };
+
+  // Save only budgets (from Budgets tab inline editor)
+  const handleSaveBudgets = async (newBudgets) => {
+    const newSettings = { ...data.settings, budgets: newBudgets };
+    await handleUpdateSettings(newSettings);
+  };
+
+  const convertToUSD = useCallback((amount, currency) => {
+    const val = Number(amount) || 0;
+    if (currency === 'USD' || currency === 'USDT') return val;
+    const rateKey = currency === 'BS' ? 'usd_bs'
+      : currency === 'BS_BCV' ? 'usd_bs_bcv'
+      : currency === 'COP' ? 'usd_cop'
+      : currency;
+    const rate = Number(rates[rateKey]) || 1;
+    return val / rate;
+  }, [rates]);
+
   const totals = useMemo(() => {
-    const transactions = data?.transactions || [];
-    const goals = data?.goals || [];
-    
-    const convertToUSD = (amount, currency) => {
-      const val = Number(amount) || 0;
-      if (currency === 'USD' || currency === 'USDT') return val;
-      const rate = Number(rates[currency]) || 1;
-      return val / rate;
+    const transactions = data.transactions;
+    const goals = data.goals;
+
+    const getVeDate = (date = new Date()) => {
+      const veStr = date.toLocaleString('en-US', { timeZone: 'America/Caracas' });
+      return new Date(veStr);
     };
-    
+
+    const nowVe = getVeDate();
+    const currentMonth = nowVe.getMonth();
+    const currentYear = nowVe.getFullYear();
+
     const grossTotalUSD = transactions.reduce((acc, t) => {
       const amountUSD = convertToUSD(t.amount, t.currency || 'USD');
-      return t.type === 'income' ? acc + amountUSD : acc - amountUSD;
+      if (t.type === 'income') return acc + amountUSD;
+      if (t.type === 'expense') return acc - amountUSD;
+      return acc;
     }, 0);
-    
-    const totalSavedUSD = goals.reduce((acc, g) => acc + (Number(g.current_amount) || 0), 0);
+
+    const totalSavedUSD = goals.reduce((acc, g) => acc + Number(g.current_amount || 0), 0);
     const availableLiquidUSD = grossTotalUSD - totalSavedUSD;
-    
-    // Monthly stats for the primary card
-    const now = new Date();
-    const currentMonth = now.getMonth();
-    const currentYear = now.getFullYear();
-    
+
+    const currencyBalances = transactions.reduce((acc, t) => {
+      const amount = Number(t.amount);
+      if (t.type === 'income' || t.type === 'goal_withdrawal') acc[t.currency] = (acc[t.currency] || 0) + amount;
+      if (t.type === 'expense' || t.type === 'saving') acc[t.currency] = (acc[t.currency] || 0) - amount;
+      return acc;
+    }, { USD: 0, BS: 0, COP: 0, USDT: 0, BS_BCV: 0 });
+
     const monthlyIncomeUSD = transactions
-      .filter(t => t.type === 'income' && new Date(t.date).getMonth() === currentMonth && new Date(t.date).getFullYear() === currentYear)
+      .filter(t => {
+        const tDate = getVeDate(new Date(t.date));
+        return t.type === 'income' && tDate.getMonth() === currentMonth && tDate.getFullYear() === currentYear;
+      })
       .reduce((acc, t) => acc + convertToUSD(t.amount, t.currency), 0);
-      
+
     const monthlyExpenseUSD = transactions
-      .filter(t => t.type === 'expense' && new Date(t.date).getMonth() === currentMonth && new Date(t.date).getFullYear() === currentYear)
+      .filter(t => {
+        const tDate = getVeDate(new Date(t.date));
+        return t.type === 'expense' && tDate.getMonth() === currentMonth && tDate.getFullYear() === currentYear;
+      })
       .reduce((acc, t) => acc + convertToUSD(t.amount, t.currency), 0);
 
-    const dailyStats = {};
-    const days = 7;
-    for (let i = 0; i < days; i++) {
-        const d = new Date();
-        d.setDate(d.getDate() - i);
-        const dateStr = d.toISOString().split('T')[0];
-        dailyStats[dateStr] = { date: dateStr, name: d.toLocaleDateString(undefined, {weekday: 'short'}), income: 0, expense: 0 };
-    }
+    const categorySpending = transactions.reduce((acc, t) => {
+      const tDate = getVeDate(new Date(t.date));
+      if (t.type === 'expense' && tDate.getMonth() === currentMonth && tDate.getFullYear() === currentYear) {
+        const amountUSD = convertToUSD(t.amount, t.currency);
+        acc[t.category] = (acc[t.category] || 0) + amountUSD;
+      }
+      return acc;
+    }, {});
 
-    transactions.forEach(t => {
-        const dateStr = t.date.split('T')[0];
-        if (dailyStats[dateStr]) {
-            const amountUSD = convertToUSD(t.amount, t.currency || 'USD');
-            if (t.type === 'income') dailyStats[dateStr].income += amountUSD;
-            else dailyStats[dateStr].expense += amountUSD;
-        }
+    const history = [];
+    const today = getVeDate();
+    let runningGross = grossTotalUSD;
+    for (let i = 0; i < 30; i++) {
+      const checkDate = new Date(today);
+      checkDate.setDate(today.getDate() - i);
+      const dateStr = checkDate.toISOString().split('T')[0];
+      history.push({ date: dateStr, value: runningGross });
+      transactions.filter(t => t.date === dateStr).forEach(t => {
+        const amountUSD = convertToUSD(t.amount, t.currency);
+        if (t.type === 'income') runningGross -= amountUSD;
+        if (t.type === 'expense') runningGross += amountUSD;
+      });
+    }
+    const trendData = history.reverse();
+
+    let totalRecentlySaved = transactions.reduce((acc, t) => {
+      const tDate = getVeDate(new Date(t.date));
+      const daysAgo = (today - tDate) / (1000 * 60 * 60 * 24);
+      if (t.type === 'saving' && daysAgo <= 60) return acc + convertToUSD(t.amount, t.currency);
+      return acc;
+    }, 0);
+    const dailyRate = totalRecentlySaved / 60;
+
+    const goalsForecast = goals.map(g => {
+      const remaining = Number(g.target_amount) - Number(g.current_amount);
+      if (remaining <= 0) return { ...g, status: 'completed', estDate: '¡Completada!' };
+      if (dailyRate <= 0) return { ...g, status: 'stagnant', estDate: 'Incalculable' };
+      const daysNeeded = Math.ceil(remaining / dailyRate);
+      const estDate = new Date(today);
+      estDate.setDate(today.getDate() + daysNeeded);
+      let status = 'on-track';
+      let statusLabel = 'A Tiempo';
+      if (g.deadline) {
+        const deadlineDate = new Date(g.deadline);
+        if (estDate > deadlineDate) { status = 'delayed'; statusLabel = 'Retrasado'; }
+      }
+      return { ...g, status, statusLabel, daysNeeded, estDate: estDate.toLocaleDateString() };
     });
 
-    const timelineData = Object.values(dailyStats).reverse();
-
     return {
-      grossTotalUSD,
-      availableLiquidUSD,
-      totalSavedUSD,
-      monthlyIncomeUSD,
-      monthlyExpenseUSD,
-      timelineData,
+      grossTotalUSD, availableLiquidUSD, totalSavedUSD,
+      monthlyIncomeUSD, monthlyExpenseUSD, currencyBalances,
+      categorySpending, trendData, goalsForecast,
       distributionData: [
         { name: 'Disponible', value: Math.max(0, availableLiquidUSD), color: '#10b981' },
-        { name: 'En Metas', value: totalSavedUSD, color: 'var(--primary)' }
-      ]
+        { name: 'En Metas', value: totalSavedUSD, color: 'var(--primary)' },
+      ],
     };
-  }, [data, rates]);
+  }, [data, convertToUSD]);
 
+  // ---- CRUD handlers ----
   const handleCreateOrUpdateGoal = async (e) => {
     e.preventDefault();
-    const cleanedGoal = {
-      ...newGoal,
-      target_amount: parseFloat(newGoal.target_amount) || 0,
-      current_amount: parseFloat(newGoal.current_amount) || 0
-    };
-
+    const cleanedGoal = { ...newGoal, target_amount: parseFloat(newGoal.target_amount) || 0, current_amount: parseFloat(newGoal.current_amount) || 0 };
     try {
       if (editingItem?.type === 'goal') {
         await financeService.updateGoal(editingItem.data.id, cleanedGoal);
@@ -167,23 +252,21 @@ export default function Finance() {
         await financeService.createGoal(cleanedGoal);
         toast.success('Meta creada');
       }
-      setShowGoalForm(false);
-      setEditingItem(null);
-      fetchData();
-    } catch (err) { 
-      console.error(err);
-      toast.error('Error en la operación'); 
-    }
+      setShowGoalForm(false); setEditingItem(null); fetchData();
+    } catch { toast.error('Error en la operación'); }
   };
 
   const handleCreateOrUpdateTrans = async (e) => {
     e.preventDefault();
-    const cleanedTrans = {
-      ...newTrans,
-      amount: parseFloat(newTrans.amount) || 0
-    };
-
+    const cleanedTrans = { ...newTrans, amount: parseFloat(newTrans.amount) || 0 };
     try {
+      if (cleanedTrans.type === 'saving') {
+        const amountUSD = convertToUSD(cleanedTrans.amount, cleanedTrans.currency);
+        if (amountUSD > (totals.availableLiquidUSD + 0.01)) {
+          toast.error(`Capital disponible insuficiente ($${totals.availableLiquidUSD.toFixed(2)} USD)`);
+          return;
+        }
+      }
       if (editingItem?.type === 'transaction') {
         await financeService.updateTransaction(editingItem.data.id, cleanedTrans);
         toast.success('Transacción actualizada');
@@ -191,38 +274,30 @@ export default function Finance() {
         await financeService.createTransaction(cleanedTrans);
         toast.success('Transacción registrada');
       }
-      setShowTransForm(false);
-      setEditingItem(null);
-      fetchData();
-    } catch (err) {
-      console.error(err);
-      toast.error('Error en la operación');
-    }
+      setShowTransForm(false); setEditingItem(null); fetchData();
+    } catch { toast.error('Error en la operación'); }
   };
 
   const handleAdjustGoal = async (e) => {
     e.preventDefault();
     if (!adjustData.amount) return;
     try {
+      const tzDate = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Caracas' })).toLocaleDateString('en-CA');
       if (adjustType === 'add') {
-        await financeService.createTransaction({
-          type: 'income', amount: adjustData.amount, currency: adjustData.currency,
-          category: 'Ahorro Manual', description: adjustData.description || 'Ajuste',
-          goal_id: selectedGoal.id, date: new Date().toISOString().split('T')[0]
-        });
+        const amountUSD = convertToUSD(adjustData.amount, adjustData.currency);
+        if (amountUSD > (totals.availableLiquidUSD + 0.01)) {
+          toast.error(`Capital disponible insuficiente ($${totals.availableLiquidUSD.toFixed(2)} USD)`);
+          return;
+        }
+        await financeService.createTransaction({ type: 'saving', amount: adjustData.amount, currency: adjustData.currency, category: 'Ahorro Manual', description: adjustData.description || 'Ajuste', goal_id: selectedGoal.id, date: tzDate });
       } else if (adjustType === 'spend') {
-        await financeService.createTransaction({
-          type: 'expense', amount: adjustData.amount, currency: adjustData.currency,
-          category: 'Gasto de Meta', description: adjustData.description,
-          goal_id: selectedGoal.id, date: new Date().toISOString().split('T')[0]
-        });
+        await financeService.createTransaction({ type: 'expense', amount: adjustData.amount, currency: adjustData.currency, category: 'Gasto de Meta', description: adjustData.description, goal_id: selectedGoal.id, date: tzDate });
+      } else if (adjustType === 'remove') {
+        await financeService.createTransaction({ type: 'goal_withdrawal', amount: adjustData.amount, currency: adjustData.currency, category: 'Retiro de Meta', description: adjustData.description || `Retiro de reserva (${selectedGoal.title})`, goal_id: selectedGoal.id, date: tzDate });
       } else if (adjustType === 'redirect') {
         const rate = Number(rates[adjustData.currency]) || 1;
         const amountInUSD = adjustData.currency === 'USD' ? Number(adjustData.amount) : Number(adjustData.amount) / rate;
-        await financeService.updateGoal(selectedGoal.id, {
-          ...selectedGoal,
-          current_amount: Math.max(0, Number(selectedGoal.current_amount) - amountInUSD)
-        });
+        await financeService.updateGoal(selectedGoal.id, { ...selectedGoal, current_amount: Math.max(0, Number(selectedGoal.current_amount) - amountInUSD) });
       }
       toast.success('Ajuste realizado');
       setShowAdjustModal(false);
@@ -230,419 +305,167 @@ export default function Finance() {
     } catch { toast.error('Error al ajustar'); }
   };
 
-  const startEditGoal = (goal) => {
-    setEditingItem({ type: 'goal', data: goal });
-    setNewGoal({ ...goal });
-    setShowGoalForm(true);
+  const startEditGoal = (goal) => { setEditingItem({ type: 'goal', data: goal }); setNewGoal({ ...goal }); setShowGoalForm(true); };
+  const startEditTrans = (tx) => { setEditingItem({ type: 'transaction', data: tx }); setNewTrans({ ...tx, date: tx.date.split('T')[0], goal_id: tx.goal_id || '' }); setShowTransForm(true); };
+
+  const handleDeleteGoal = async (id) => {
+    if (window.confirm('¿Eliminar meta?')) {
+      try { await financeService.deleteGoal(id); toast.success('Meta eliminada'); fetchData(); }
+      catch { toast.error('Error al eliminar'); }
+    }
   };
 
-  const startEditTrans = (tx) => {
-    setEditingItem({ type: 'transaction', data: tx });
-    setNewTrans({ ...tx, date: tx.date.split('T')[0], goal_id: tx.goal_id || '' });
-    setShowTransForm(true);
+  const handleDeleteTrans = async (id) => {
+    if (window.confirm('¿Eliminar movimiento?')) {
+      try { await financeService.deleteTransaction(id); toast.success('Eliminado'); fetchData(); }
+      catch { toast.error('Error al eliminar'); }
+    }
   };
 
-  const startAdjustGoal = (goal) => {
-    setSelectedGoal(goal);
-    setShowAdjustModal(true);
+  const handleDeleteAllTransactions = async () => {
+    if (window.confirm('¿ESTÁS SEGURO? Se borrarán todos los movimientos y las metas se reiniciarán a $0.')) {
+      try { await financeService.deleteAllTransactions(); toast.success('Movimientos eliminados'); fetchData(); }
+      catch { toast.error('Error al reiniciar movimientos'); }
+    }
+  };
+
+  const handleDeleteAllGoals = async () => {
+    if (window.confirm('¿ELIMINAR TODAS LAS METAS? Esta acción no se puede deshacer.')) {
+      try { await financeService.deleteAllGoals(); toast.success('Metas eliminadas'); fetchData(); }
+      catch { toast.error('Error al eliminar metas'); }
+    }
   };
 
   if (loading) return <div className="loading-state">Personalizando tu panel...</div>;
 
   return (
     <div className="finance-page animate-fade-in" style={{ padding: '1.5rem', maxWidth: '1400px', margin: '0 auto', paddingBottom: '5rem' }}>
-      
-      {/* Header Premium */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
-        <div style={{ position: 'relative' }}>
-          <h1 style={{ margin: 0, fontSize: '1.6rem', fontWeight: 900, letterSpacing: '-0.5px' }}>
-            Finanzas <span style={{ color: 'var(--primary)' }}>Personales</span>
-          </h1>
-          <div style={{ height: '3px', width: '40px', background: 'var(--primary)', borderRadius: '10px', marginTop: '2px' }}></div>
-        </div>
-        
-        <div style={{ display: 'flex', gap: '1rem' }}>
-          <button className="theme-toggle" onClick={() => setShowRatesPanel(true)} title="Tasas">
-            <RefreshCw size={20} />
+
+      <FinanceHeader
+        onNewGoal={() => { setEditingItem(null); resetGoalForm(); setShowGoalForm(true); }}
+        onResetTransactions={handleDeleteAllTransactions}
+        onResetGoals={handleDeleteAllGoals}
+        onOpenSettings={() => setShowSettingsModal(true)}
+      />
+
+      {/* ====== TAB NAV ====== */}
+      <div
+        style={{
+          display: 'flex',
+          gap: '0.35rem',
+          background: 'rgba(0,0,0,0.12)',
+          padding: '0.3rem',
+          borderRadius: '14px',
+          marginBottom: '1.5rem',
+          width: 'fit-content',
+          border: '1px solid rgba(255,255,255,0.06)',
+        }}
+      >
+        {TABS.map(tab => (
+          <button
+            key={tab.key}
+            id={`finance-tab-${tab.key}`}
+            title={tab.title}
+            onClick={() => setActiveTab(tab.key)}
+            style={{
+              padding: '0.5rem 1.1rem',
+              borderRadius: '10px',
+              border: 'none',
+              fontSize: '0.88rem',
+              fontWeight: 700,
+              cursor: 'pointer',
+              transition: 'all 0.22s cubic-bezier(0.4,0,0.2,1)',
+              background: activeTab === tab.key
+                ? 'var(--primary)'
+                : 'transparent',
+              color: activeTab === tab.key ? 'white' : 'var(--text-secondary)',
+              boxShadow: activeTab === tab.key ? '0 2px 12px rgba(var(--primary-rgb),0.35)' : 'none',
+            }}
+          >
+            {tab.label}
           </button>
-          <button className="btn-primary" onClick={() => { setEditingItem(null); resetGoalForm(); setShowGoalForm(true); }}>
-            <Target size={18} /> Nueva Meta
-          </button>
-        </div>
+        ))}
       </div>
 
-      {/* Main KPI Cards */}
-      <div className="finance-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
-        <div className="glass-panel" style={{ padding: '1.2rem', borderBottom: '3px solid var(--primary)', position: 'relative', overflow: 'hidden' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.8rem' }}>
-             <div style={{ padding: '0.4rem', background: 'rgba(var(--primary-rgb), 0.1)', borderRadius: '10px' }}><TrendUp size={16} color="var(--primary)" /></div>
-             <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)' }}>CAPITAL DISPONIBLE</span>
-          </div>
-          <h2 style={{ fontSize: '1.8rem', fontWeight: 800, margin: 0 }}>${totals.availableLiquidUSD.toLocaleString(undefined, { maximumFractionDigits: 2 })}</h2>
-          <div style={{ marginTop: '0.8rem', display: 'flex', gap: '1.5rem' }}>
-            <div>
-              <div style={{ fontSize: '0.65rem', color: 'var(--text-secondary)' }}>Ingresos Mes</div>
-              <div style={{ fontWeight: 700, color: '#10b981', fontSize: '0.85rem' }}>+${totals.monthlyIncomeUSD.toLocaleString()}</div>
-            </div>
-            <div>
-              <div style={{ fontSize: '0.65rem', color: 'var(--text-secondary)' }}>Gastos Mes</div>
-              <div style={{ fontWeight: 700, color: '#ef4444', fontSize: '0.85rem' }}>-${totals.monthlyExpenseUSD.toLocaleString()}</div>
-            </div>
-          </div>
-        </div>
-
-        <div className="glass-panel" style={{ padding: '1.2rem', borderLeft: '3px solid #10b981' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.8rem' }}>
-             <div style={{ padding: '0.4rem', background: 'rgba(16, 185, 129, 0.1)', borderRadius: '10px' }}><DollarSign size={16} color="#10b981" /></div>
-             <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)' }}>PATRIMONIO BRUTO</span>
-          </div>
-          <h2 style={{ fontSize: '1.8rem', fontWeight: 800, margin: 0, color: '#10b981' }}>${totals.grossTotalUSD.toLocaleString(undefined, { maximumFractionDigits: 2 })}</h2>
-          <div style={{ marginTop: '1rem' }}>
-            <div className="progress-bar-container" style={{ height: '5px' }}>
-              <div className="progress-bar-fill" style={{ width: `${(totals.availableLiquidUSD / totals.grossTotalUSD) * 100}%`, background: '#10b981' }}></div>
-            </div>
-          </div>
-        </div>
-
-        <div className="glass-panel" style={{ padding: '1.2rem', borderLeft: '3px solid var(--primary)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.8rem' }}>
-             <div style={{ padding: '0.4rem', background: 'rgba(var(--primary-rgb), 0.1)', borderRadius: '10px' }}><PiggyBank size={16} color="var(--primary)" /></div>
-             <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)' }}>RESERVA EN METAS</span>
-          </div>
-          <h2 style={{ fontSize: '1.8rem', fontWeight: 800, margin: 0 }}>${totals.totalSavedUSD.toLocaleString(undefined, { maximumFractionDigits: 2 })}</h2>
-          <p style={{ margin: '0.8rem 0 0 0', fontSize: '0.7rem', color: 'var(--text-secondary)' }}>
-            Para <strong>{data.goals.length} objetivos</strong>
-          </p>
-        </div>
-      </div>
-
-      <div className="finance-main-layout">
-        {/* Gráfica 1: Flujo de Caja (7D) */}
-        <section className="glass-panel area-flow" style={{ padding: '1.2rem', minHeight: '250px' }}>
-          <h3 style={{ margin: '0 0 1rem 0', fontSize: '1rem', fontWeight: 700 }}>Flujo de Caja (7D)</h3>
-          <div style={{ height: '180px', width: '100%', minWidth: 0 }}>
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={totals.timelineData}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />
-                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: 'var(--text-secondary)', fontSize: 10}} />
-                <YAxis hide />
-                <Tooltip contentStyle={{ background: '#1a1a1a', border: 'none', borderRadius: '8px', fontSize: '0.8rem' }} />
-                <Area type="monotone" dataKey="income" stroke="#10b981" fill="#10b981" fillOpacity={0.05} strokeWidth={2} />
-                <Area type="monotone" dataKey="expense" stroke="#ef4444" fill="#ef4444" fillOpacity={0.05} strokeWidth={2} />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
-        </section>
-
-        {/* Gráfica 2: Distribución (Pie) */}
-        <section className="glass-panel area-dist" style={{ padding: '1.2rem', textAlign: 'center', minHeight: '250px' }}>
-           <h3 style={{ fontSize: '0.9rem', marginBottom: '1rem' }}>Distribución</h3>
-           <div style={{ height: '140px', width: '100%', minWidth: 0 }}>
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie data={totals.distributionData} dataKey="value" innerRadius={45} outerRadius={60} paddingAngle={4}>
-                    {totals.distributionData.map((entry, index) => <Cell key={index} fill={entry.color} />)}
-                  </Pie>
-                  <Tooltip contentStyle={{ fontSize: '0.75rem' }} />
-                </PieChart>
-              </ResponsiveContainer>
-           </div>
-           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', marginTop: '1rem' }}>
-              {totals.distributionData.map((d, i) => (
-                <div key={i} style={{ fontSize: '0.7rem', padding: '0.4rem', background: 'rgba(255,255,255,0.01)', borderRadius: '8px' }}>
-                  <div style={{ color: d.color, fontWeight: 800 }}>{d.name}</div>
-                  <div>${d.value.toLocaleString()}</div>
-                </div>
-              ))}
-           </div>
-        </section>
-
-        {/* Operaciones Recientes (Scrollable) */}
-        <section className="glass-panel area-tx" style={{ padding: '1.2rem' }}>
-           <h3 style={{ margin: '0 0 1rem 0', fontSize: '1rem' }}>Operaciones Recientes</h3>
-           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', maxHeight: '350px', overflowY: 'auto', paddingRight: '0.5rem' }}>
-             {data.transactions.length === 0 ? (
-               <div style={{ textAlign: 'center', padding: '2rem', opacity: 0.5, fontSize: '0.85rem' }}>No hay movimientos</div>
-             ) : (
-               data.transactions.map(t => (
-                 <div key={t.id} style={{ 
-                   display: 'flex', alignItems: 'center', gap: '0.8rem', padding: '0.8rem', 
-                   background: 'rgba(255,255,255,0.01)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.03)'
-                 }}>
-                   <div style={{ 
-                     padding: '0.5rem', borderRadius: '10px', 
-                     background: t.type === 'income' ? 'rgba(16, 185, 129, 0.08)' : 'rgba(239, 68, 68, 0.08)',
-                     color: t.type === 'income' ? '#10b981' : '#ef4444'
-                   }}>
-                     {t.type === 'income' ? <TrendingUp size={16} /> : <TrendingDown size={16} />}
-                   </div>
-                   <div style={{ flex: 1, minWidth: 0 }}>
-                     <div style={{ fontWeight: 700, fontSize: '0.85rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{t.category} <span style={{ opacity: 0.4, fontWeight: 400 }}>{t.source ? `| ${t.source}` : ''}</span></div>
-                     <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{t.description || new Date(t.date).toLocaleDateString()}</div>
-                   </div>
-                   <div style={{ textAlign: 'right' }}>
-                     <div style={{ fontWeight: 800, fontSize: '0.9rem', color: t.type === 'income' ? '#10b981' : '#ef4444' }}>
-                       {t.type === 'income' ? '+' : '-'}${Number(t.amount).toLocaleString()}
-                     </div>
-                   </div>
-                   <div style={{ display: 'flex', gap: '0.2rem', marginLeft: '0.5rem' }}>
-                     <button onClick={() => startEditTrans(t)} className="theme-toggle" style={{ padding: '0.3rem' }}><Edit2 size={12} /></button>
-                     <button onClick={() => { if(window.confirm('¿Eliminar?')) { financeService.deleteTransaction(t.id).then(fetchData); } }} className="delete-btn-subtle" style={{ padding: '0.3rem' }}><Trash2 size={12} /></button>
-                   </div>
-                 </div>
-               ))
-             )}
-           </div>
-        </section>
-
-        {/* Tasas de Cambio */}
-        <section className="glass-panel area-rates" style={{ padding: '1.2rem' }}>
-           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-              <h3 style={{ margin: 0, fontSize: '0.9rem' }}>Tasas</h3>
-              <RefreshCw size={14} style={{ cursor: 'pointer', opacity: 0.5 }} onClick={fetchData} title="Refrescar" />
-           </div>
-           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
-              {Object.entries(rates).map(([curr, rate]) => (
-                <div key={curr} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.6rem', background: 'rgba(255,255,255,0.02)', borderRadius: '10px', fontSize: '0.85rem' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                    <span style={{ fontWeight: 800, color: 'var(--primary)' }}>{curr}</span>
-                    <span style={{ fontSize: '0.7rem', opacity: 0.5 }}>/ USD</span>
-                  </div>
-                  <div style={{ fontWeight: 700 }}>{Number(rate).toLocaleString()}</div>
-                </div>
-              ))}
-              <button type="button" className="btn-primary" onClick={() => setShowRatesPanel(true)} style={{ marginTop: '0.5rem', padding: '0.5rem', fontSize: '0.75rem', width: '100%', justifyContent: 'center' }}>
-                 Configurar Tasas
-              </button>
-           </div>
-        </section>
-
-        {/* Metas Activas (Scrollable) */}
-        <section className="glass-panel area-goals" style={{ padding: '1.2rem', height: '100%', display: 'flex', flexDirection: 'column' }}>
-          <h3 style={{ margin: '0 0 1rem 0', fontSize: '1rem' }}>Metas Activas</h3>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem', maxHeight: '550px', overflowY: 'auto', paddingRight: '0.5rem' }}>
-            {data.goals.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '2rem', opacity: 0.5, fontSize: '0.85rem' }}>Cero metas activas</div>
-            ) : (
-              data.goals.map(goal => {
-                const progress = Math.min((Number(goal.current_amount) / Number(goal.target_amount)) * 100, 100);
-                return (
-                  <div key={goal.id} style={{ padding: '1rem', background: 'rgba(255,255,255,0.02)', borderRadius: '14px', border: '1px solid rgba(255,255,255,0.02)' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.8rem' }}>
-                      <div style={{ display: 'flex', gap: '0.6rem', alignItems: 'center', flex: 1, minWidth: 0 }}>
-                         <span style={{ fontSize: '1.2rem' }}>{goal.icon}</span>
-                         <h4 style={{ 
-                           margin: 0, fontSize: '0.95rem', fontWeight: 900, color: '#fff',
-                           whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' 
-                         }}>
-                           {goal.title}
-                         </h4>
-                      </div>
-                      <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center', marginLeft: '0.5rem' }}>
-                        <button onClick={() => startAdjustGoal(goal)} style={{ padding: '0.4rem', display: 'flex', alignItems: 'center', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '8px', color: '#fff', cursor: 'pointer' }} title="Ajustar"><ArrowLeftRight size={13} /></button>
-                        <button onClick={() => startEditGoal(goal)} style={{ padding: '0.4rem', display: 'flex', alignItems: 'center', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '8px', color: '#fff', cursor: 'pointer' }} title="Editar"><Edit2 size={13} /></button>
-                        <button onClick={() => { if(window.confirm('¿Eliminar meta?')) { financeService.deleteGoal(goal.id).then(fetchData); } }} style={{ padding: '0.4rem', display: 'flex', alignItems: 'center', background: 'rgba(239, 68, 68, 0.05)', border: '1px solid rgba(239, 68, 68, 0.1)', borderRadius: '8px', color: '#ef4444', cursor: 'pointer' }} title="Eliminar"><Trash2 size={13} /></button>
-                      </div>
-                    </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', marginBottom: '0.4rem' }}>
-                        <span>${Number(goal.current_amount).toLocaleString()}</span>
-                        <span style={{ opacity: 0.5 }}>${Number(goal.target_amount).toLocaleString()}</span>
-                    </div>
-                    <div className="progress-bar-container" style={{ height: '6px' }}>
-                       <div className="progress-bar-fill" style={{ width: `${progress}%`, background: goal.color }}></div>
-                    </div>
-                  </div>
-                );
-              })
-            )}
-          </div>
-        </section>
-      </div>
-
-      {/* --- MODALS --- */}
-      
-      {showTransForm && (
-        <div className="modal-overlay" style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', zIndex: 1001, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1.5rem', backdropFilter: 'blur(10px)' }}>
-          <form className="glass-panel animate-scale" style={{ width: '100%', maxWidth: '520px', padding: '2.5rem' }} onSubmit={handleCreateOrUpdateTrans}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '2rem' }}>
-              <h2 style={{ margin: 0 }}>{editingItem ? 'Editar' : 'Nuevo'} Movimiento</h2>
-              <button type="button" onClick={() => setShowTransForm(false)} style={{ background: 'transparent', border: 'none', color: '#fff' }}><X size={20} /></button>
-            </div>
-            
-            <div style={{ display: 'flex', gap: '0.6rem', marginBottom: '2rem', background: 'rgba(255,255,255,0.03)', padding: '0.4rem', borderRadius: '16px' }}>
-              {['income', 'expense'].map(type => (
-                <button key={type} type="button" onClick={() => setNewTrans({...newTrans, type})} style={{ flex: 1, padding: '0.8rem', borderRadius: '12px', border: 'none', background: newTrans.type === type ? (type === 'income' ? '#10b981' : '#ef4444') : 'transparent', color: 'white', fontWeight: 800, cursor: 'pointer' }}>
-                  {type === 'income' ? 'Ingreso' : 'Egreso'}
-                </button>
-              ))}
-            </div>
-
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginBottom: '1.5rem' }}>
-               <div className="form-group">
-                 <label>Monto</label>
-                 <input type="number" value={newTrans.amount} onChange={e => setNewTrans({...newTrans, amount: e.target.value})} required />
-               </div>
-               <div className="form-group">
-                 <label>Divisa</label>
-                 <select value={newTrans.currency} onChange={e => setNewTrans({...newTrans, currency: e.target.value})}>
-                   <option value="USD">USD</option>
-                   <option value="BS">BS</option>
-                   <option value="COP">COP</option>
-                   <option value="USDT">USDT</option>
-                 </select>
-               </div>
-            </div>
-
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginBottom: '1.5rem' }}>
-              <div className="form-group">
-                <label>Origen</label>
-                <input type="text" value={newTrans.source} onChange={e => setNewTrans({...newTrans, source: e.target.value})} placeholder="Ej: Alcaldía" />
-              </div>
-              <div className="form-group">
-                <label>Categoría</label>
-                <input type="text" value={newTrans.category} onChange={e => setNewTrans({...newTrans, category: e.target.value})} required />
-              </div>
-            </div>
-
-            <div className="form-group" style={{ marginBottom: '2rem' }}>
-              <label>Meta Asociada</label>
-              <select value={newTrans.goal_id || ''} onChange={e => setNewTrans({...newTrans, goal_id: e.target.value || null})}>
-                <option value="">Ninguna</option>
-                {data.goals.map(g => <option key={g.id} value={g.id}>{g.title}</option>)}
-              </select>
-            </div>
-
-            <button type="submit" className="btn-primary" style={{ width: '100%', padding: '1.2rem', background: newTrans.type === 'income' ? '#10b981' : '#ef4444' }}>
-              {editingItem ? 'Actualizar' : 'Confirmar'}
-            </button>
-          </form>
-        </div>
+      {/* ====== TAB CONTENT ====== */}
+      {activeTab === 'overview' && (
+        <FinanceOverview
+          totals={totals}
+          data={data}
+          onEditTrans={startEditTrans}
+          onDeleteTrans={handleDeleteTrans}
+          onAdjustGoal={(goal) => { setSelectedGoal(goal); setShowAdjustModal(true); }}
+          onEditGoal={startEditGoal}
+          onDeleteGoal={handleDeleteGoal}
+          onShowReport={() => setShowReportModal(true)}
+        />
       )}
 
-      {showAdjustModal && (
-        <div className="modal-overlay" style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', zIndex: 1001, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1.5rem', backdropFilter: 'blur(10px)' }}>
-          <form className="glass-panel animate-scale" style={{ width: '100%', maxWidth: '420px', padding: '2rem' }} onSubmit={handleAdjustGoal}>
-             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
-                <h3 style={{ margin: 0 }}>Ajustar: {selectedGoal?.title}</h3>
-                <button type="button" onClick={() => setShowAdjustModal(false)} style={{ background: 'transparent', border: 'none', color: '#fff' }}><X /></button>
-             </div>
-             <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem' }}>
-               {['add', 'spend', 'redirect'].map(t => (
-                 <button key={t} type="button" onClick={() => setAdjustType(t)} style={{ flex: 1, padding: '0.6rem', fontSize: '0.75rem', borderRadius: '10px', background: adjustType === t ? 'var(--primary)' : 'rgba(255,255,255,0.05)', border: 'none', color: '#fff' }}>
-                   {t === 'add' ? 'Ahorrar' : t === 'spend' ? 'Gastar' : 'Liberar'}
-                 </button>
-               ))}
-             </div>
-             <div className="form-group" style={{ marginBottom: '1rem' }}>
-               <label>Cantidad</label>
-               <input type="number" value={adjustData.amount} onChange={e => setAdjustData({...adjustData, amount: e.target.value})} required />
-             </div>
-             <button type="submit" className="btn-primary" style={{ width: '100%', padding: '1rem' }}>Ejecutar</button>
-          </form>
-        </div>
+      {activeTab === 'budgets' && (
+        <FinanceBudgets
+          budgets={budgets}
+          categorySpending={totals.categorySpending}
+          onOpenSettings={() => setShowSettingsModal(true)}
+          onSaveBudgets={handleSaveBudgets}
+        />
       )}
 
-      {showGoalForm && (
-        <div className="modal-overlay" style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', zIndex: 1001, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1.5rem', backdropFilter: 'blur(10px)' }}>
-          <form className="glass-panel animate-scale" style={{ width: '100%', maxWidth: '480px', padding: '2.5rem' }} onSubmit={handleCreateOrUpdateGoal}>
-             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '2rem', alignItems: 'center' }}>
-                <h2 style={{ margin: 0, fontSize: '1.5rem', fontWeight: 900 }}>{editingItem ? 'Editar Meta' : 'Nueva Meta'}</h2>
-                <div style={{ padding: '0.8rem', background: newGoal.color || 'var(--primary)', borderRadius: '15px', fontSize: '1.5rem', color: '#fff' }}>
-                  {newGoal.icon || '🎯'}
-                </div>
-             </div>
-
-             <div className="form-group" style={{ marginBottom: '1.5rem' }}>
-               <label>Nombre de la Meta</label>
-               <input type="text" value={newGoal.title} onChange={e => setNewGoal({...newGoal, title: e.target.value})} placeholder="Ej: Viaje a Japón, Nueva PC..." required />
-             </div>
-
-             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginBottom: '1.5rem' }}>
-               <div className="form-group">
-                 <label>Monto Objetivo (USD)</label>
-                 <input type="number" value={newGoal.target_amount} onChange={e => setNewGoal({...newGoal, target_amount: e.target.value})} placeholder="0.00" required />
-               </div>
-               <div className="form-group">
-                 <label>Fecha Límite (Opcional)</label>
-                 <input type="date" value={newGoal.deadline || ''} onChange={e => setNewGoal({...newGoal, deadline: e.target.value})} />
-               </div>
-             </div>
-
-             <div className="form-group" style={{ marginBottom: '1.5rem' }}>
-                <label>Selecciona un Icono</label>
-                <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap', marginTop: '0.5rem' }}>
-                  {['🎯', '💰', '🏠', '🚗', '🏍️', '📱', '📺', '🍲', '✈️', '💻', '🎓', '🏥', '🎮', '🎁', '🍕', '🏃', '📈', '🔒'].map(emoji => (
-                    <div 
-                      key={emoji} 
-                      onClick={() => setNewGoal({...newGoal, icon: emoji})}
-                      style={{ 
-                        width: '38px', height: '38px', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        fontSize: '1.2rem', cursor: 'pointer', borderRadius: '10px',
-                        background: newGoal.icon === emoji ? 'var(--primary)' : 'rgba(255,255,255,0.03)',
-                        border: '1px solid ' + (newGoal.icon === emoji ? 'var(--primary)' : 'rgba(255,255,255,0.05)'),
-                        transform: newGoal.icon === emoji ? 'scale(1.1)' : 'scale(1)', transition: '0.2s'
-                      }}
-                    >
-                      {emoji}
-                    </div>
-                  ))}
-                </div>
-             </div>
-
-             <div className="form-group" style={{ marginBottom: '2rem' }}>
-               <label>Color de Seguimiento</label>
-               <div style={{ display: 'flex', gap: '0.8rem', flexWrap: 'wrap', marginTop: '0.5rem' }}>
-                 {['#ec4899', '#8b5cf6', '#3b82f6', '#10b981', '#f59e0b', '#ef4444'].map(c => (
-                   <div 
-                     key={c} 
-                     onClick={() => setNewGoal({...newGoal, color: c})}
-                     style={{ 
-                       width: '32px', height: '32px', borderRadius: '50%', background: c, cursor: 'pointer',
-                       border: newGoal.color === c ? '3px solid #fff' : 'none',
-                       transform: newGoal.color === c ? 'scale(1.1)' : 'scale(1)', transition: '0.2s'
-                     }} 
-                   />
-                 ))}
-                 <input type="color" value={newGoal.color || '#8b5cf6'} onChange={e => setNewGoal({...newGoal, color: e.target.value})} style={{ width: '32px', height: '32px', border: 'none', background: 'transparent', padding: 0, cursor: 'pointer' }} />
-               </div>
-             </div>
-
-             <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
-               <button type="submit" className="btn-primary" style={{ flex: 1, padding: '1.1rem', background: 'var(--primary)', color: '#fff', fontWeight: 800 }}>
-                 {editingItem ? 'Actualizar Meta' : 'Crear Objetivo'}
-               </button>
-               <button 
-                 type="button" 
-                 onClick={() => setShowGoalForm(false)} 
-                 style={{ 
-                   flex: 0.5, padding: '1rem', border: '1px solid rgba(255,255,255,0.1)', 
-                   background: 'rgba(255,255,255,0.05)', color: '#fff', borderRadius: '14px', 
-                   fontWeight: 700, cursor: 'pointer' 
-                 }}
-               >
-                 Cancelar
-               </button>
-             </div>
-          </form>
-        </div>
+      {activeTab === 'rates' && (
+        <FinanceRates
+          rates={rates}
+          onSaveRates={handleSaveRates}
+        />
       )}
 
-      {showRatesPanel && (
-        <div className="modal-overlay" style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', zIndex: 1001, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1.5rem', backdropFilter: 'blur(10px)' }}>
-          <div className="glass-panel animate-scale" style={{ width: '100%', maxWidth: '400px', padding: '2rem' }}>
-            <h3 style={{ marginBottom: '2rem' }}>Tasas</h3>
-            {Object.keys(rates).map(currency => (
-              <div key={currency} className="form-group" style={{ marginBottom: '1rem' }}>
-                <label>1 USD = ? {currency}</label>
-                <input type="number" value={rates[currency]} onChange={e => setRates({...rates, [currency]: Number(e.target.value)})} />
-              </div>
-            ))}
-            <button onClick={handleUpdateRates} className="btn-primary" style={{ width: '100%', padding: '1rem' }}>Actualizar</button>
-            <button onClick={() => setShowRatesPanel(false)} style={{ width: '100%', background: 'transparent', border: 'none', color: 'var(--text-secondary)', marginTop: '1rem' }}>Cerrar</button>
-          </div>
-        </div>
-      )}
+      {/* ====== MODALS ====== */}
+      <TransactionFormModal
+        show={showTransForm}
+        onClose={() => setShowTransForm(false)}
+        onSubmit={handleCreateOrUpdateTrans}
+        editingItem={editingItem}
+        newTrans={newTrans}
+        setNewTrans={setNewTrans}
+        goals={data.goals}
+      />
 
+      <GoalFormModal
+        show={showGoalForm}
+        onClose={() => setShowGoalForm(false)}
+        onSubmit={handleCreateOrUpdateGoal}
+        editingItem={editingItem}
+        newGoal={newGoal}
+        setNewGoal={setNewGoal}
+      />
+
+      <GoalAdjustModal
+        show={showAdjustModal}
+        onClose={() => setShowAdjustModal(false)}
+        onSubmit={handleAdjustGoal}
+        selectedGoal={selectedGoal}
+        adjustType={adjustType}
+        setAdjustType={setAdjustType}
+        adjustData={adjustData}
+        setAdjustData={setAdjustData}
+        rates={rates}
+      />
+
+      <FinanceSettingsModal
+        show={showSettingsModal}
+        onClose={() => setShowSettingsModal(false)}
+        rates={rates}
+        setRates={setRates}
+        budgets={budgets}
+        setBudgets={setBudgets}
+        onSave={handleUpdateSettings}
+      />
+
+      <MonthlyReportModal
+        show={showReportModal}
+        onClose={() => setShowReportModal(false)}
+        transactions={data.transactions}
+        totals={totals}
+        rates={rates}
+      />
     </div>
   );
 }

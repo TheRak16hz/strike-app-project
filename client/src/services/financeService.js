@@ -70,6 +70,22 @@ export const financeService = {
     return res.json();
   },
 
+  deleteAllTransactions: async () => {
+    const res = await fetch(`${API_URL}/transactions/all`, {
+      method: 'DELETE',
+      headers: getAuthHeader()
+    });
+    return res.json();
+  },
+
+  deleteAllGoals: async () => {
+    const res = await fetch(`${API_URL}/goals/all`, {
+      method: 'DELETE',
+      headers: getAuthHeader()
+    });
+    return res.json();
+  },
+
   updateSettings: async (settings) => {
     const res = await fetch(`${API_URL}/settings`, {
       method: 'POST',

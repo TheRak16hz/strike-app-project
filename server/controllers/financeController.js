@@ -3,13 +3,16 @@ const db = require('../db');
 exports.getFinanceData = async (req, res) => {
   try {
     const goalsResult = await db.query('SELECT * FROM savings_goals WHERE user_id = $1 ORDER BY created_at DESC', [req.user.id]);
-    const transactionsResult = await db.query('SELECT * FROM transactions WHERE user_id = $1 ORDER BY date DESC, created_at DESC LIMIT 50', [req.user.id]);
+    const transactionsResult = await db.query('SELECT * FROM transactions WHERE user_id = $1 ORDER BY date DESC, created_at DESC LIMIT 200', [req.user.id]);
     const settingsResult = await db.query('SELECT settings FROM user_settings WHERE user_id = $1', [req.user.id]);
     
     res.json({
       goals: goalsResult.rows,
       transactions: transactionsResult.rows,
-      settings: settingsResult.rows[0]?.settings || { exchange_rates: { BS: 54, COP: 4000, USDT: 1 } }
+      settings: settingsResult.rows[0]?.settings || { 
+        exchange_rates: { usd_bs: 65, usd_bs_bcv: 45, usd_cop: 4000, bs_cop: 5 },
+        budgets: {} 
+      }
     });
   } catch (err) {
     console.error(err.message);
@@ -65,16 +68,17 @@ exports.createTransaction = async (req, res) => {
     // Start transaction to ensure data consistency if linking to a goal
     await db.query('BEGIN');
     
+    const veDate = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Caracas" }));
     const newTransaction = await db.query(
       'INSERT INTO transactions (user_id, type, amount, currency, category, source, description, date, goal_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *',
-      [req.user.id, type, amount, currency || 'USD', category, source || '', description || '', date || new Date(), goal_id || null]
+      [req.user.id, type, amount, currency || 'USD', category, source || '', description || '', date || veDate, goal_id || null]
     );
 
     // If it's linked to a goal, we update the goal amount
     if (goal_id) {
       // Get current exchange rates to convert to USD (base currency for goals)
       const settingsResult = await db.query('SELECT settings FROM user_settings WHERE user_id = $1', [req.user.id]);
-      const rates = settingsResult.rows[0]?.settings?.exchange_rates || { BS: 54, COP: 4000, USDT: 1 };
+      const rates = settingsResult.rows[0]?.settings?.exchange_rates || { usd_bs: 65, usd_bs_bcv: 45, usd_cop: 4000, bs_cop: 5 };
       
       let amountInUSD = amount;
       if (currency !== 'USD') {
@@ -82,7 +86,8 @@ exports.createTransaction = async (req, res) => {
         amountInUSD = amount / rate;
       }
 
-      const updateOp = type === 'income' ? '+' : '-';
+      // If it's a goal_withdrawal, we subtract from the goal (internal move)
+      const updateOp = (type === 'income' || type === 'saving') ? '+' : '-';
       await db.query(
         `UPDATE savings_goals SET current_amount = current_amount ${updateOp} $1 WHERE id = $2 AND user_id = $3`,
         [amountInUSD, goal_id, req.user.id]
@@ -112,7 +117,7 @@ exports.deleteTransaction = async (req, res) => {
     const trans = transResult.rows[0];
     if (trans.goal_id) {
       // Revert the amount from the goal
-      const amountToRevert = trans.type === 'income' ? -trans.amount : trans.amount;
+      const amountToRevert = (trans.type === 'income' || trans.type === 'saving') ? -trans.amount : trans.amount;
       await db.query(
         'UPDATE savings_goals SET current_amount = current_amount + $1 WHERE id = $2 AND user_id = $3',
         [amountToRevert, trans.goal_id, req.user.id]
@@ -146,19 +151,19 @@ exports.updateTransaction = async (req, res) => {
 
     // Get rates for conversion
     const settingsResult = await db.query('SELECT settings FROM user_settings WHERE user_id = $1', [req.user.id]);
-    const rates = settingsResult.rows[0]?.settings?.exchange_rates || { BS: 54, COP: 4000, USDT: 1 };
+    const rates = settingsResult.rows[0]?.settings?.exchange_rates || { usd_bs: 65, usd_bs_bcv: 45, usd_cop: 4000, bs_cop: 5 };
 
     // 2. Revert old goal impact
     if (oldTx.goal_id) {
       const oldAmountInUSD = oldTx.currency === 'USD' ? oldTx.amount : oldTx.amount / (rates[oldTx.currency] || 1);
-      const revertOp = oldTx.type === 'income' ? '-' : '+';
+      const revertOp = (oldTx.type === 'income' || oldTx.type === 'saving') ? '-' : '+';
       await db.query(`UPDATE savings_goals SET current_amount = current_amount ${revertOp} $1 WHERE id = $2`, [oldAmountInUSD, oldTx.goal_id]);
     }
 
     // 3. Apply new goal impact
     if (goal_id) {
       const newAmountInUSD = currency === 'USD' ? amount : amount / (rates[currency] || 1);
-      const applyOp = type === 'income' ? '+' : '-';
+      const applyOp = (type === 'income' || type === 'saving') ? '+' : '-';
       await db.query(`UPDATE savings_goals SET current_amount = current_amount ${applyOp} $1 WHERE id = $2`, [newAmountInUSD, goal_id]);
     }
 
@@ -188,5 +193,29 @@ exports.updateSettings = async (req, res) => {
   } catch (err) {
     console.error(err.message);
     res.status(500).json({ error: 'Error al guardar ajustes' });
+  }
+};
+
+exports.deleteAllTransactions = async (req, res) => {
+  try {
+    await db.query('DELETE FROM transactions WHERE user_id = $1', [req.user.id]);
+    // Reset goal amounts if needed? The user wants to restart, so we should probably reset goal current_amount too
+    await db.query('UPDATE savings_goals SET current_amount = 0 WHERE user_id = $1', [req.user.id]);
+    res.json({ message: 'Todos los movimientos eliminados y metas reiniciadas' });
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).json({ error: 'Error al eliminar movimientos' });
+  }
+};
+
+exports.deleteAllGoals = async (req, res) => {
+  try {
+    await db.query('DELETE FROM savings_goals WHERE user_id = $1', [req.user.id]);
+    // Also remove links in transactions?
+    await db.query('UPDATE transactions SET goal_id = NULL WHERE user_id = $1', [req.user.id]);
+    res.json({ message: 'Todas las metas eliminadas' });
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).json({ error: 'Error al eliminar metas' });
   }
 };
