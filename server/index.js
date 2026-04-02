@@ -68,14 +68,6 @@ const runMigrations = async () => {
     `);
 
     // --- TRAINING TRACKER TABLES (v3 - Enhanced Categories) ---
-
-    // Drops old tables to clean up before new structure (Temporary for dev)
-    await db.query(`DROP TABLE IF EXISTS workout_log_exercises CASCADE;`);
-    await db.query(`DROP TABLE IF EXISTS workout_logs CASCADE;`);
-    await db.query(`DROP TABLE IF EXISTS routine_exercises CASCADE;`);
-    await db.query(`DROP TABLE IF EXISTS workout_routines CASCADE;`);
-    await db.query(`DROP TABLE IF EXISTS exercises_library CASCADE;`);
-
     // 1. Exercise Library Catalog (Enhanced)
     await db.query(`
       CREATE TABLE IF NOT EXISTS exercises_library (
