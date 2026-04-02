@@ -5,9 +5,9 @@
   "main": "index.js",
   "scripts": {
     "server": "npm run dev --prefix server",
-    "client": "npm run dev --prefix client",
+    "client": "concurrently -n \"Vite,QR\" -c \"blue,green\" \"npm run dev --prefix client\" \"node scripts/show-qr.js\"",
     "qr": "node scripts/show-qr.js",
-    "dev": "concurrently \"npm run server\" \"npm run client\" \"npm run qr\"",
+    "dev": "echo \"Para iniciar el proyecto, ejecuta 'npm run client' y 'npm run server' en terminales separadas.\"",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
