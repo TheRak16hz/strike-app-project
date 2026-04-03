@@ -23,7 +23,7 @@ export default function Header({ onNewHabitClick, onFinanceAction }) {
       display: 'flex', 
       justifyContent: 'space-between', 
       alignItems: 'center',
-      background: 'rgba(var(--surface-rgb), 0.8)',
+      background: 'color-mix(in srgb, var(--surface) 85%, transparent)',
       backdropFilter: 'blur(10px)',
       borderBottom: '1px solid var(--border-light)',
       position: 'sticky',

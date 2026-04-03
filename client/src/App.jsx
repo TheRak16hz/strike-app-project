@@ -421,17 +421,17 @@ function Dashboard() {
 
       <main className="app-main">
         <div className="list-header animate-slide" style={{ animationDelay: '0.1s', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem', width: '100%' }}>
             <h2>{activeTab === 'habitos' ? 'Mis Hábitos' : 'Mis Tareas'}</h2>
-            <div className="dashboard-tabs">
+            <div className="dashboard-tabs" style={{ flexWrap: 'wrap' }}>
               <button 
                 className={`tab-btn ${activeTab === 'habitos' ? 'active' : ''}`}
                 style={{ 
                   background: activeTab === 'habitos' ? 'var(--primary)' : 'transparent', 
-                  border: 'none', padding: '0.4rem 0.8rem', cursor: 'pointer',
-                  borderRadius: '10px', fontSize: '0.9rem', fontWeight: 600, 
+                  border: 'none', padding: '0.4rem 0.5rem', cursor: 'pointer',
+                  borderRadius: '10px', fontSize: '0.85rem', fontWeight: 600, 
                   color: activeTab === 'habitos' ? 'white' : 'var(--text-secondary)',
-                  transition: 'all 0.2s'
+                  transition: 'all 0.2s', flex: '1 1 auto'
                 }}
                 onClick={() => setActiveTab('habitos')}
               >
@@ -441,10 +441,10 @@ function Dashboard() {
                 className={`tab-btn ${activeTab === 'tareas' ? 'active' : ''}`}
                 style={{ 
                   background: activeTab === 'tareas' ? 'var(--primary)' : 'transparent', 
-                  border: 'none', padding: '0.4rem 0.8rem', cursor: 'pointer',
-                  borderRadius: '10px', fontSize: '0.9rem', fontWeight: 600, 
+                  border: 'none', padding: '0.4rem 0.5rem', cursor: 'pointer',
+                  borderRadius: '10px', fontSize: '0.85rem', fontWeight: 600, 
                   color: activeTab === 'tareas' ? 'white' : 'var(--text-secondary)',
-                  transition: 'all 0.2s'
+                  transition: 'all 0.2s', flex: '1 1 auto'
                 }}
                 onClick={() => setActiveTab('tareas')}
               >
@@ -454,10 +454,10 @@ function Dashboard() {
                 className={`tab-btn ${activeTab === 'stats' ? 'active' : ''}`}
                 style={{ 
                   background: activeTab === 'stats' ? 'var(--primary)' : 'transparent', 
-                  border: 'none', padding: '0.4rem 0.8rem', cursor: 'pointer',
-                  borderRadius: '10px', fontSize: '0.9rem', fontWeight: 600, 
+                  border: 'none', padding: '0.4rem 0.5rem', cursor: 'pointer',
+                  borderRadius: '10px', fontSize: '0.85rem', fontWeight: 600, 
                   color: activeTab === 'stats' ? 'white' : 'var(--text-secondary)',
-                  transition: 'all 0.2s'
+                  transition: 'all 0.2s', flex: '1 1 auto'
                 }}
                 onClick={() => setActiveTab('stats')}
               >
