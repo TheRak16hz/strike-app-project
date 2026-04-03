@@ -12,7 +12,7 @@ const RATE_CONFIGS = [
     label: 'BCV',
     sublabel: 'USD → Bs',
     emoji: '🏛️',
-    description: 'Tasa oficial del Banco Central (BCV)',
+    description: 'Tasa oficial del Banco Central de Venezuela',
     color: '#60a5fa',
     autoFetch: true,
     suffix: 'Bs',
@@ -20,9 +20,9 @@ const RATE_CONFIGS = [
   {
     key: 'usd_bs',
     label: 'Paralelo',
-    sublabel: 'USD → Bs',
+    sublabel: 'USD / USDT → Bs',
     emoji: '📈',
-    description: 'Dólar paralelo — promedio de mercado',
+    description: 'Dólar paralelo — promedio P2P de mercado',
     color: '#c084fc',
     autoFetch: true,
     suffix: 'Bs',
@@ -32,7 +32,7 @@ const RATE_CONFIGS = [
     label: 'Bs → COP',
     sublabel: '1 Bs en pesos',
     emoji: '🔁',
-    description: 'Cambio de calle: Bs a pesos colombianos',
+    description: 'Cambio de calle: bolívares a pesos colombianos',
     color: '#f97316',
     autoFetch: false,
     suffix: 'COP',
@@ -42,21 +42,10 @@ const RATE_CONFIGS = [
     label: 'USD → COP',
     sublabel: '1 dólar en pesos',
     emoji: '🇨🇴',
-    description: 'Promedio estándar de mercado',
+    description: 'Promedio estándar USD a peso colombiano',
     color: '#34d399',
     autoFetch: false,
     suffix: 'COP',
-  },
-  {
-    key: 'usdt_bs',
-    label: 'USDT → Bs',
-    sublabel: '1 USDT en bolívares',
-    emoji: '💎',
-    description: 'Tether — referencia cripto (opcional)',
-    color: '#fbbf24',
-    autoFetch: false,
-    optional: true,
-    suffix: 'Bs',
   },
 ];
 
@@ -64,11 +53,10 @@ const RATE_CONFIGS = [
 // MONEDAS PARA CALCULADORA
 // ========================
 const CURRENCIES = [
-  { value: 'USD',    label: 'USD 🇺🇸',  name: 'Dólar' },
-  { value: 'USDT',   label: 'USDT 💎',  name: 'Tether' },
-  { value: 'BS_P',   label: 'Bs (P) 🇻🇪', name: 'Bolívar Paralelo' },
-  { value: 'BS_BCV', label: 'Bs (BCV) 🏛️', name: 'Bolívar BCV' },
-  { value: 'COP',    label: 'COP 🇨🇴',  name: 'Peso Col.' },
+  { value: 'USD',    label: 'USD 🇺🇸',     name: 'Dólar' },
+  { value: 'BS_P',   label: 'Bs Paralelo', name: 'Bolívar paralelo' },
+  { value: 'BS_BCV', label: 'Bs BCV',      name: 'Bolívar BCV' },
+  { value: 'COP',    label: 'COP 🇨🇴',     name: 'Peso colombiano' },
 ];
 
 // ========================
@@ -108,8 +96,9 @@ function calcConversion(amount, from, to, rates) {
   return fmt(result);
 }
 
-function fmt(n) {
-  return Number(n).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+function fmt(n, decimals = 2) {
+  // Use en-US so decimals always use period (.) not comma
+  return Number(n).toLocaleString('en-US', { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
 }
 
 function timeSince(isoDate) {
@@ -244,7 +233,7 @@ export default function FinanceRates({ rates, onSaveRates }) {
         )}
 
         {/* Cards grid */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '0.9rem' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem' }}>
           {RATE_CONFIGS.map(cfg => {
             const isEditing = editingKey === cfg.key;
             const value = rates[cfg.key];
@@ -345,14 +334,14 @@ export default function FinanceRates({ rates, onSaveRates }) {
           <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 800 }}>Calculadora de Conversión</h3>
         </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', maxWidth: '520px', margin: '0 auto' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
 
           {/* FROM */}
           <div className="glass-panel" style={{ padding: '1.2rem', background: 'rgba(255,255,255,0.03)' }}>
             <label style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
               Convertir de
             </label>
-            <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.7rem', alignItems: 'center' }}>
+            <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.7rem', alignItems: 'stretch' }}>
               <input
                 id="calc-amount-input"
                 type="number"
@@ -360,14 +349,14 @@ export default function FinanceRates({ rates, onSaveRates }) {
                 value={calc.amount}
                 onChange={e => setCalc(prev => ({ ...prev, amount: e.target.value }))}
                 style={{
-                  flex: '1 1 0',
-                  minWidth: 0,
-                  padding: '0.85rem 1rem',
+                  flex: '1 1 auto',
+                  width: 0,
+                  padding: '0.9rem 1rem',
                   background: 'rgba(var(--primary-rgb),0.06)',
                   border: '1px solid rgba(var(--primary-rgb),0.2)',
                   borderRadius: '12px',
                   color: 'var(--text-primary)',
-                  fontSize: '1.4rem',
+                  fontSize: '1.5rem',
                   fontWeight: 800,
                   boxSizing: 'border-box',
                 }}
@@ -377,15 +366,14 @@ export default function FinanceRates({ rates, onSaveRates }) {
                 value={calc.from}
                 onChange={e => setCalc(prev => ({ ...prev, from: e.target.value }))}
                 style={{
-                  padding: '0.85rem 0.9rem',
+                  flex: '0 0 148px',
+                  padding: '0.9rem 0.8rem',
                   background: 'rgba(var(--primary-rgb),0.06)',
                   border: '1px solid rgba(var(--primary-rgb),0.2)',
                   borderRadius: '12px',
                   color: 'var(--text-primary)',
                   fontSize: '0.85rem',
                   fontWeight: 700,
-                  minWidth: '130px',
-                  flexShrink: 0,
                   cursor: 'pointer',
                 }}
               >
@@ -423,12 +411,12 @@ export default function FinanceRates({ rates, onSaveRates }) {
             <label style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
               Resultado
             </label>
-            <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.7rem', alignItems: 'center' }}>
+            <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.7rem', alignItems: 'stretch' }}>
               <div
                 style={{
-                  flex: '1 1 0',
-                  minWidth: 0,
-                  padding: '0.85rem 1rem',
+                  flex: '1 1 auto',
+                  width: 0,
+                  padding: '0.9rem 1rem',
                   background: 'rgba(var(--primary-rgb),0.07)',
                   border: '1px solid rgba(var(--primary-rgb),0.15)',
                   borderRadius: '12px',
@@ -436,7 +424,6 @@ export default function FinanceRates({ rates, onSaveRates }) {
                   fontWeight: 900,
                   color: 'var(--primary)',
                   letterSpacing: '-0.02em',
-                  minHeight: '56px',
                   display: 'flex',
                   alignItems: 'center',
                   overflow: 'hidden',
@@ -451,15 +438,14 @@ export default function FinanceRates({ rates, onSaveRates }) {
                 value={calc.to}
                 onChange={e => setCalc(prev => ({ ...prev, to: e.target.value }))}
                 style={{
-                  padding: '0.85rem 0.9rem',
+                  flex: '0 0 148px',
+                  padding: '0.9rem 0.8rem',
                   background: 'rgba(var(--primary-rgb),0.06)',
                   border: '1px solid rgba(var(--primary-rgb),0.2)',
                   borderRadius: '12px',
                   color: 'var(--text-primary)',
                   fontSize: '0.85rem',
                   fontWeight: 700,
-                  minWidth: '130px',
-                  flexShrink: 0,
                   cursor: 'pointer',
                 }}
               >
