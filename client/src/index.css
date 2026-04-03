@@ -151,6 +151,14 @@ select option {
   gap: 2rem;
 }
 
+@media (max-width: 600px) {
+  .desktop-only { display: none !important; }
+  .app-container {
+    padding: 1rem 0.6rem 80px 0.6rem; /* Padding bottom for Mobile Nav */
+    gap: 1.25rem;
+  }
+}
+
 /* Micro-animations */
 @keyframes slideUp {
   from {

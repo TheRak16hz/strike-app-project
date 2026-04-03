@@ -12,6 +12,7 @@ import Register from './pages/Register';
 import Settings from './pages/Settings';
 import Finance from './pages/Finance';
 import Training from './pages/Training';
+import BottomNav from './components/BottomNav';
 import { useTheme } from './hooks/useTheme';
 import { useNotifications } from './hooks/useNotifications';
 import HabitRadarChart from './components/HabitRadarChart';
@@ -505,7 +506,7 @@ function Dashboard() {
             </div>
 
             <button 
-              className="btn-primary" 
+              className="btn-primary desktop-only" 
               onClick={() => { setEditingHabit(null); setIsFormOpen(true); }}
             >
               <Plus size={20} /> Nuevo
@@ -622,6 +623,10 @@ export default function App() {
                   <Route path="/training" element={<Training />} />
                   <Route path="*" element={<Navigate to="/" replace />} />
                 </Routes>
+                <BottomNav 
+                  onNewHabitClick={() => window.dispatchEvent(new CustomEvent('nav-action-new-habit'))}
+                  onFinanceAction={() => window.dispatchEvent(new CustomEvent('nav-action-finance'))}
+                />
               </div>
             </PrivateRoute>
           } 

@@ -1,0 +1,75 @@
+/* Bottom Navigation Styles (Mobile Only) */
+.bottom-nav {
+  display: none;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 65px;
+  background: var(--surface);
+  border-top: 1px solid var(--border-light);
+  box-shadow: 0 -4px 12px rgba(0,0,0,0.05);
+  z-index: 1000;
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.bottom-nav-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.2rem;
+  color: var(--text-secondary);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  height: 100%;
+  transition: color 0.2s;
+  padding: 0;
+}
+
+.bottom-nav-item span {
+  font-size: 0.65rem;
+  font-weight: 600;
+}
+
+.bottom-nav-item.active {
+  color: var(--primary);
+}
+
+.bottom-nav-item.active span {
+  font-weight: 800;
+}
+
+.bottom-nav-fab {
+  display: none;
+  position: fixed;
+  bottom: 80px; /* Above the bottom nav */
+  right: 1.5rem;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--primary);
+  color: white;
+  border: none;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+  z-index: 1001;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.bottom-nav-fab:active {
+  transform: scale(0.95);
+}
+
+@media (max-width: 600px) {
+  .bottom-nav {
+    display: flex;
+  }
+  .bottom-nav-fab {
+    display: flex;
+  }
+}

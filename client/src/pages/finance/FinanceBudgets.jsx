@@ -235,7 +235,7 @@ export default function FinanceBudgets({ budgets, categorySpending, onOpenSettin
       <div
         style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
+          gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))',
           gap: '1rem',
         }}
       >
@@ -350,7 +350,7 @@ export default function FinanceBudgets({ budgets, categorySpending, onOpenSettin
           <TrendingUp size={40} style={{ marginBottom: '1rem', color: 'var(--primary)', opacity: 0.5 }} />
           <h3 style={{ margin: 0 }}>Sin presupuestos configurados</h3>
           <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginTop: '0.5rem' }}>
-            Haz clic en "Editar Límites" para definir cuánto quieres gastar por categoría.
+            Haz clic en &quot;Editar Límites&quot; para definir cuánto quieres gastar por categoría.
           </p>
         </div>
       )}

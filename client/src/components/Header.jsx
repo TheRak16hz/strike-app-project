@@ -37,7 +37,7 @@ export default function Header({ onNewHabitClick, onFinanceAction }) {
         </div>
 
         {user && (
-          <nav style={{ display: 'flex', gap: '0.25rem', background: 'rgba(0,0,0,0.05)', padding: '0.2rem', borderRadius: '10px' }}>
+          <nav className="desktop-only" style={{ display: 'flex', gap: '0.25rem', background: 'rgba(0,0,0,0.05)', padding: '0.2rem', borderRadius: '10px' }}>
             <button 
               onClick={() => navigate('/')}
               style={{ 
@@ -78,7 +78,7 @@ export default function Header({ onNewHabitClick, onFinanceAction }) {
       <div className="header-actions" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
         {user && (
           <>
-            <div style={{ display: 'flex', gap: '0.4rem', marginRight: '0.5rem' }}>
+            <div className="desktop-only" style={{ display: 'flex', gap: '0.4rem', marginRight: '0.5rem' }}>
               {isHabits && onNewHabitClick && (
                 <button className="btn-primary" onClick={onNewHabitClick} style={{ padding: '0.4rem 0.75rem', fontSize: '0.8rem' }}>
                   <Plus size={14} /> Nuevo Hábito

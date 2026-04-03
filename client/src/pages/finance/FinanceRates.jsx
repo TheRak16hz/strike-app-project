@@ -233,7 +233,7 @@ export default function FinanceRates({ rates, onSaveRates }) {
         )}
 
         {/* Cards grid */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '1rem' }}>
           {RATE_CONFIGS.map(cfg => {
             const isEditing = editingKey === cfg.key;
             const value = rates[cfg.key];
@@ -341,7 +341,7 @@ export default function FinanceRates({ rates, onSaveRates }) {
             <label style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
               Convertir de
             </label>
-            <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.7rem', alignItems: 'stretch' }}>
+            <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.7rem', flexWrap: 'wrap', alignItems: 'stretch' }}>
               <input
                 id="calc-amount-input"
                 type="number"
@@ -366,7 +366,7 @@ export default function FinanceRates({ rates, onSaveRates }) {
                 value={calc.from}
                 onChange={e => setCalc(prev => ({ ...prev, from: e.target.value }))}
                 style={{
-                  flex: '0 0 148px',
+                  flex: '1 1 148px',
                   padding: '0.9rem 0.8rem',
                   background: 'rgba(var(--primary-rgb),0.06)',
                   border: '1px solid rgba(var(--primary-rgb),0.2)',
@@ -411,7 +411,7 @@ export default function FinanceRates({ rates, onSaveRates }) {
             <label style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
               Resultado
             </label>
-            <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.7rem', alignItems: 'stretch' }}>
+            <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.7rem', flexWrap: 'wrap', alignItems: 'stretch' }}>
               <div
                 style={{
                   flex: '1 1 auto',
@@ -438,7 +438,7 @@ export default function FinanceRates({ rates, onSaveRates }) {
                 value={calc.to}
                 onChange={e => setCalc(prev => ({ ...prev, to: e.target.value }))}
                 style={{
-                  flex: '0 0 148px',
+                  flex: '1 1 148px',
                   padding: '0.9rem 0.8rem',
                   background: 'rgba(var(--primary-rgb),0.06)',
                   border: '1px solid rgba(var(--primary-rgb),0.2)',
