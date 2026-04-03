@@ -3,61 +3,7 @@ import PropTypes from 'prop-types';
 import { RefreshCcw, ArrowRightLeft, Edit3, Check, X, Wifi, WifiOff, Clock } from 'lucide-react';
 import { financeService } from '../../services/financeService';
 
-// ========================
-// CONFIGURACIÓN DE TASAS
-// ========================
-const RATE_CONFIGS = [
-  {
-    key: 'usd_bs_bcv',
-    label: 'BCV',
-    sublabel: 'USD → Bs',
-    emoji: '🏛️',
-    description: 'Tasa oficial del Banco Central de Venezuela',
-    color: '#60a5fa',
-    autoFetch: true,
-    suffix: 'Bs',
-  },
-  {
-    key: 'usd_bs',
-    label: 'Paralelo',
-    sublabel: 'USD / USDT → Bs',
-    emoji: '📈',
-    description: 'Dólar paralelo — promedio P2P de mercado',
-    color: '#c084fc',
-    autoFetch: true,
-    suffix: 'Bs',
-  },
-  {
-    key: 'bs_cop',
-    label: 'Bs → COP',
-    sublabel: '1 Bs en pesos',
-    emoji: '🔁',
-    description: 'Cambio de calle: bolívares a pesos colombianos',
-    color: '#f97316',
-    autoFetch: false,
-    suffix: 'COP',
-  },
-  {
-    key: 'usd_cop',
-    label: 'USD → COP',
-    sublabel: '1 dólar en pesos',
-    emoji: '🇨🇴',
-    description: 'Promedio estándar USD a peso colombiano',
-    color: '#34d399',
-    autoFetch: false,
-    suffix: 'COP',
-  },
-];
-
-// ========================
-// MONEDAS PARA CALCULADORA
-// ========================
-const CURRENCIES = [
-  { value: 'USD',    label: 'USD 🇺🇸',     name: 'Dólar' },
-  { value: 'BS_P',   label: 'Bs Paralelo', name: 'Bolívar paralelo' },
-  { value: 'BS_BCV', label: 'Bs BCV',      name: 'Bolívar BCV' },
-  { value: 'COP',    label: 'COP 🇨🇴',     name: 'Peso colombiano' },
-];
+// Lógicas y UI dependientes de metadatos
 
 // ========================
 // LÓGICA DE CONVERSIÓN
@@ -114,7 +60,7 @@ function timeSince(isoDate) {
 // ========================
 // COMPONENTE PRINCIPAL
 // ========================
-export default function FinanceRates({ rates, onSaveRates }) {
+export default function FinanceRates({ rates, onSaveRates, rateConfigs = [], currencies = [] }) {
   const [editingKey, setEditingKey] = useState(null);   // which card is being edited
   const [draftValue, setDraftValue] = useState('');
   const [calc, setCalc] = useState({ amount: '', from: 'USD', to: 'BS_P' });
@@ -174,7 +120,7 @@ export default function FinanceRates({ rates, onSaveRates }) {
     <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '1.75rem' }}>
 
       {/* =================== RATES GRID =================== */}
-      <div>
+      <div style={{ maxWidth: '600px', width: '100%' }}>
         {/* Header */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.75rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
@@ -233,8 +179,8 @@ export default function FinanceRates({ rates, onSaveRates }) {
         )}
 
         {/* Cards grid */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '1rem' }}>
-          {RATE_CONFIGS.map(cfg => {
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem' }}>
+          {rateConfigs.map(cfg => {
             const isEditing = editingKey === cfg.key;
             const value = rates[cfg.key];
             return (
@@ -377,7 +323,7 @@ export default function FinanceRates({ rates, onSaveRates }) {
                   cursor: 'pointer',
                 }}
               >
-                {CURRENCIES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
+                {currencies.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
               </select>
             </div>
           </div>
@@ -449,7 +395,7 @@ export default function FinanceRates({ rates, onSaveRates }) {
                   cursor: 'pointer',
                 }}
               >
-                {CURRENCIES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
+                {currencies.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
               </select>
             </div>
           </div>
@@ -457,7 +403,7 @@ export default function FinanceRates({ rates, onSaveRates }) {
           {/* Formula hint */}
           {calc.amount && (
             <p style={{ textAlign: 'center', fontSize: '0.8rem', color: 'var(--text-secondary)', margin: 0, opacity: 0.75 }}>
-              {calc.amount} {CURRENCIES.find(c => c.value === calc.from)?.name} = {calcResult} {CURRENCIES.find(c => c.value === calc.to)?.name}
+              {calc.amount} {currencies.find(c => c.value === calc.from)?.name} = {calcResult} {currencies.find(c => c.value === calc.to)?.name}
             </p>
           )}
         </div>
@@ -473,4 +419,6 @@ export default function FinanceRates({ rates, onSaveRates }) {
 FinanceRates.propTypes = {
   rates: PropTypes.object.isRequired,
   onSaveRates: PropTypes.func.isRequired,
+  rateConfigs: PropTypes.array,
+  currencies: PropTypes.array
 };

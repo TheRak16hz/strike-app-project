@@ -1,6 +1,5 @@
 import PropTypes from 'prop-types';
 import { X } from 'lucide-react';
-import { FINANCE_CATEGORIES } from '../../../constants/financeConstants';
 
 export default function TransactionFormModal({ 
   show, 
@@ -9,7 +8,8 @@ export default function TransactionFormModal({
   editingItem, 
   newTrans, 
   setNewTrans, 
-  goals 
+  goals,
+  categories = [] 
 }) {
   if (!show) return null;
 
@@ -61,7 +61,7 @@ export default function TransactionFormModal({
         <div style={{ marginBottom: '1.5rem' }}>
           <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>Categoría</label>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(80px, 1fr))', gap: '0.5rem', maxHeight: '150px', overflowY: 'auto', padding: '0.5rem', background: 'rgba(255,255,255,0.02)', borderRadius: '10px' }}>
-            {FINANCE_CATEGORIES.map(cat => (
+            {categories.map(cat => (
               <div 
                 key={cat.id} 
                 onClick={() => handleCategorySelect(cat)}
@@ -125,4 +125,5 @@ TransactionFormModal.propTypes = {
     id: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired,
     title: PropTypes.string.isRequired,
   })).isRequired,
+  categories: PropTypes.array,
 };

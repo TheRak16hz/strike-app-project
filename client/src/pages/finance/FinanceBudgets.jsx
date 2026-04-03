@@ -2,16 +2,7 @@ import { useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
 import { Settings, TrendingUp, CheckCircle, AlertTriangle, XCircle } from 'lucide-react';
 
-const CATEGORIES = ['Comida', 'Transporte', 'Servicios', 'Salud', 'Entretenimiento', 'Otros'];
-
-const CATEGORY_ICONS = {
-  Comida: '🍔',
-  Transporte: '🚌',
-  Servicios: '💡',
-  Salud: '🏥',
-  Entretenimiento: '🎮',
-  Otros: '📦',
-};
+// Categorías precargadas pasadas por propiedades
 
 function StatusBadge({ pct }) {
   if (pct >= 100)
@@ -71,7 +62,7 @@ function StatusBadge({ pct }) {
 
 StatusBadge.propTypes = { pct: PropTypes.number.isRequired };
 
-export default function FinanceBudgets({ budgets, categorySpending, onOpenSettings, onSaveBudgets }) {
+export default function FinanceBudgets({ budgets, categorySpending, onOpenSettings, onSaveBudgets, categories = [] }) {
   // Inline editing state
   const [editing, setEditing] = useState(false);
   const [localBudgets, setLocalBudgets] = useState({ ...budgets });
@@ -80,8 +71,8 @@ export default function FinanceBudgets({ budgets, categorySpending, onOpenSettin
     setLocalBudgets({ ...budgets });
   }, [budgets]);
 
-  const totalBudget = CATEGORIES.reduce((a, c) => a + (Number(localBudgets[c]) || 0), 0);
-  const totalSpent = CATEGORIES.reduce((a, c) => a + (Number(categorySpending[c]) || 0), 0);
+  const totalBudget = categories.reduce((a, cObj) => a + (Number(localBudgets[cObj.id]) || 0), 0);
+  const totalSpent = categories.reduce((a, cObj) => a + (Number(categorySpending[cObj.id]) || 0), 0);
   const overallPct = totalBudget > 0 ? Math.min((totalSpent / totalBudget) * 100, 100) : 0;
 
   const handleSave = () => {
@@ -239,7 +230,8 @@ export default function FinanceBudgets({ budgets, categorySpending, onOpenSettin
           gap: '1rem',
         }}
       >
-        {CATEGORIES.map(cat => {
+        {categories.map(catObj => {
+          const cat = catObj.id;
           const budget = Number(localBudgets[cat]) || 0;
           const spent = Number(categorySpending[cat]) || 0;
           const pct = budget > 0 ? Math.min((spent / budget) * 100, 100) : 0;
@@ -262,7 +254,7 @@ export default function FinanceBudgets({ budgets, categorySpending, onOpenSettin
               {/* Category Header */}
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-                  <span style={{ fontSize: '1.4rem' }}>{CATEGORY_ICONS[cat]}</span>
+                  <span style={{ fontSize: '1.4rem' }}>{catObj.icon || '📦'}</span>
                   <div>
                     <div style={{ fontWeight: 800, fontSize: '0.95rem' }}>{cat}</div>
                     {budget > 0 && <StatusBadge pct={rawPct} />}
@@ -363,4 +355,5 @@ FinanceBudgets.propTypes = {
   categorySpending: PropTypes.object.isRequired,
   onOpenSettings: PropTypes.func.isRequired,
   onSaveBudgets: PropTypes.func.isRequired,
+  categories: PropTypes.array
 };

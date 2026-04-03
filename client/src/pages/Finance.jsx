@@ -57,6 +57,7 @@ export default function Finance() {
   const [adjustData, setAdjustData] = useState({ amount: '', description: '', currency: 'USD' });
   const [rates, setRates] = useState({ usd_bs: 648, usd_bs_bcv: 474, usd_cop: 4200, bs_cop: 5, usdt_bs: 648 });
   const [budgets, setBudgets] = useState({});
+  const [metadata, setMetadata] = useState({ finance_categories: [], rate_configs: [], currencies: [] });
 
   const resetGoalForm = () => setNewGoal({ title: '', target_amount: '', deadline: '', color: 'var(--primary)', icon: '💰' });
   const resetTransForm = () => setNewTrans({
@@ -77,8 +78,16 @@ export default function Finance() {
 
   const fetchDataInitial = async () => {
     try {
-      const res = await financeService.getFinanceData();
+      const [res, metaRes] = await Promise.all([
+        financeService.getFinanceData(),
+        financeService.getMetadata().catch(() => ({ finance_categories: [], rate_configs: [], currencies: [] }))
+      ]);
       setData(res);
+      setMetadata({
+        finance_categories: metaRes.finance_categories || [],
+        rate_configs: metaRes.rate_configs || [],
+        currencies: metaRes.currencies || []
+      });
       if (res.settings) {
         if (res.settings.exchange_rates) setRates(res.settings.exchange_rates);
         if (res.settings.budgets) setBudgets(res.settings.budgets);
@@ -407,6 +416,7 @@ export default function Finance() {
           categorySpending={totals.categorySpending}
           onOpenSettings={() => setShowSettingsModal(true)}
           onSaveBudgets={handleSaveBudgets}
+          categories={metadata.finance_categories}
         />
       )}
 
@@ -414,6 +424,8 @@ export default function Finance() {
         <FinanceRates
           rates={rates}
           onSaveRates={handleSaveRates}
+          rateConfigs={metadata.rate_configs}
+          currencies={metadata.currencies}
         />
       )}
 
@@ -426,6 +438,7 @@ export default function Finance() {
         newTrans={newTrans}
         setNewTrans={setNewTrans}
         goals={data.goals}
+        categories={metadata.finance_categories}
       />
 
       <GoalFormModal

@@ -21,6 +21,21 @@ function fetchJSON(url) {
   });
 }
 
+// --- Fetch global app metadata ---
+exports.getMetadata = async (req, res) => {
+  try {
+    const result = await db.query('SELECT * FROM app_metadata');
+    const metadata = {};
+    for (const row of result.rows) {
+      metadata[row.id] = row.data;
+    }
+    res.json(metadata);
+  } catch (err) {
+    console.error('Error al obtener metadatos:', err.message);
+    res.status(500).json({ error: 'Error al obtener metadatos', detail: err.message });
+  }
+};
+
 // --- Fetch live rates from dolarapi.com (free, no ban risk) ---
 exports.fetchLiveRates = async (req, res) => {
   try {

@@ -7,6 +7,7 @@ const authMiddleware = require('../middleware/authMiddleware');
 router.use(authMiddleware);
 
 router.get('/', financeController.getFinanceData);
+router.get('/metadata', financeController.getMetadata);
 router.post('/goals', financeController.createGoal);
 router.put('/goals/:id', financeController.updateGoal);
 router.delete('/goals/all', financeController.deleteAllGoals);

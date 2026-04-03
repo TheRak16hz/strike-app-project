@@ -67,6 +67,52 @@ const runMigrations = async () => {
       );
     `);
 
+    // --- APP METADATA ---
+    await db.query(`
+      CREATE TABLE IF NOT EXISTS app_metadata (
+        id VARCHAR(50) PRIMARY KEY,
+        data JSONB NOT NULL,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+
+    // Seed App Metadata
+    const checkMetadata = await db.query('SELECT COUNT(*) FROM app_metadata');
+    if (parseInt(checkMetadata.rows[0].count) === 0) {
+      const financeCategories = [
+        { id: 'Salario', label: 'Salario', icon: '💰', color: '#10b981' },
+        { id: 'Comida', label: 'Comida', icon: '🍲', color: '#f59e0b' },
+        { id: 'Transporte', label: 'Transporte', icon: '🚗', color: '#3b82f6' },
+        { id: 'Vivienda', label: 'Vivienda', icon: '🏠', color: '#8b5cf6' },
+        { id: 'Servicios', label: 'Servicios', icon: '⚡', color: '#ec4899' },
+        { id: 'Salud', label: 'Salud', icon: '🏥', color: '#ef4444' },
+        { id: 'Ocio', label: 'Ocio', icon: '🎮', color: '#8b5cf6' },
+        { id: 'Compras', label: 'Compras', icon: '🛍️', color: '#3b82f6' },
+        { id: 'Ahorro', label: 'Ahorro', icon: '🏦', color: 'var(--primary)' },
+        { id: 'Educación', label: 'Educación', icon: '🎓', color: '#f59e0b' },
+        { id: 'Otros', label: 'Otros', icon: '✨', color: '#6b7280' }
+      ];
+
+      const rateConfigs = [
+        { key: 'usd_bs_bcv', label: 'BCV', sublabel: 'USD → Bs', emoji: '🏛️', description: 'Tasa oficial del Banco Central de Venezuela', color: '#60a5fa', autoFetch: true, suffix: 'Bs' },
+        { key: 'usd_bs', label: 'Paralelo', sublabel: 'USD / USDT → Bs', emoji: '📈', description: 'Dólar paralelo — promedio P2P de mercado', color: '#c084fc', autoFetch: true, suffix: 'Bs' },
+        { key: 'bs_cop', label: 'Bs → COP', sublabel: '1 Bs en pesos', emoji: '🔁', description: 'Cambio de calle: bolívares a pesos colombianos', color: '#f97316', autoFetch: false, suffix: 'COP' },
+        { key: 'usd_cop', label: 'USD → COP', sublabel: '1 dólar en pesos', emoji: '🇨🇴', description: 'Promedio estándar USD a peso colombiano', color: '#34d399', autoFetch: false, suffix: 'COP' }
+      ];
+
+      const currencies = [
+        { value: 'USD', label: 'USD 🇺🇸', name: 'Dólar' },
+        { value: 'BS_P', label: 'Bs Paralelo', name: 'Bolívar paralelo' },
+        { value: 'BS_BCV', label: 'Bs BCV', name: 'Bolívar BCV' },
+        { value: 'COP', label: 'COP 🇨🇴', name: 'Peso colombiano' }
+      ];
+
+      await db.query('INSERT INTO app_metadata (id, data) VALUES ($1, $2)', ['finance_categories', JSON.stringify(financeCategories)]);
+      await db.query('INSERT INTO app_metadata (id, data) VALUES ($1, $2)', ['rate_configs', JSON.stringify(rateConfigs)]);
+      await db.query('INSERT INTO app_metadata (id, data) VALUES ($1, $2)', ['currencies', JSON.stringify(currencies)]);
+      console.log('📚 Metadata inicial insertada en BD.');
+    }
+
     // --- TRAINING TRACKER TABLES (v3 - Enhanced Categories) ---
     // 1. Exercise Library Catalog (Enhanced)
     await db.query(`

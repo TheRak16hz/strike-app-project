@@ -18,6 +18,13 @@ export const financeService = {
     return res.json();
   },
 
+  getMetadata: async () => {
+    const res = await fetch(`${API_URL}/metadata`, {
+      headers: getAuthHeader()
+    });
+    return res.json();
+  },
+
   createGoal: async (goalData) => {
     const res = await fetch(`${API_URL}/goals`, {
       method: 'POST',
