@@ -101,7 +101,7 @@ export default function Finance() {
 
   const handleUpdateSettings = async (newSettings) => {
     try {
-      await financeService.updateSettings({ settings: newSettings });
+      await financeService.updateSettings(newSettings);
       setData(prev => ({ ...prev, settings: newSettings }));
       if (newSettings.exchange_rates) setRates(newSettings.exchange_rates);
       if (newSettings.budgets) setBudgets(newSettings.budgets);

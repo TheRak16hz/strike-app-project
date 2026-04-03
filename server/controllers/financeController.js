@@ -82,10 +82,15 @@ exports.getFinanceData = async (req, res) => {
     const transactionsResult = await db.query('SELECT * FROM transactions WHERE user_id = $1 ORDER BY date DESC, created_at DESC LIMIT 200', [req.user.id]);
     const settingsResult = await db.query('SELECT settings FROM user_settings WHERE user_id = $1', [req.user.id]);
     
+    let finalSettings = settingsResult.rows[0]?.settings;
+    if (finalSettings && finalSettings.settings && !finalSettings.exchange_rates) {
+      finalSettings = finalSettings.settings;
+    }
+    
     res.json({
       goals: goalsResult.rows,
       transactions: transactionsResult.rows,
-      settings: settingsResult.rows[0]?.settings || { 
+      settings: finalSettings || { 
         exchange_rates: { usd_bs: 648, usd_bs_bcv: 474, usd_cop: 4200, bs_cop: 5, usdt_bs: 648 },
         budgets: {} 
       }
@@ -250,7 +255,11 @@ exports.updateTransaction = async (req, res) => {
 
 exports.updateSettings = async (req, res) => {
   try {
-    const { settings } = req.body;
+    let { settings } = req.body;
+    // Fix historically corrupted nested settings payload
+    if (settings && settings.settings && !settings.exchange_rates) {
+      settings = settings.settings;
+    }
     await db.query(
       'INSERT INTO user_settings (user_id, settings, updated_at) VALUES ($1, $2, NOW()) ON CONFLICT (user_id) DO UPDATE SET settings = $2, updated_at = NOW()',
       [req.user.id, JSON.stringify(settings)]
