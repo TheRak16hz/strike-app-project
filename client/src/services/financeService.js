@@ -93,5 +93,13 @@ export const financeService = {
       body: JSON.stringify({ settings })
     });
     return res.json();
+  },
+
+  fetchLiveRates: async () => {
+    const res = await fetch(`${API_URL}/rates/live`, {
+      method: 'POST',
+      headers: getAuthHeader(),
+    });
+    return res.json();
   }
 };

@@ -16,5 +16,6 @@ router.put('/transactions/:id', financeController.updateTransaction);
 router.delete('/transactions/all', financeController.deleteAllTransactions);
 router.delete('/transactions/:id', financeController.deleteTransaction);
 router.post('/settings', financeController.updateSettings);
+router.post('/rates/live', financeController.fetchLiveRates);
 
 module.exports = router;

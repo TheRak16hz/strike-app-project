@@ -1,4 +1,79 @@
 const db = require('../db');
+const https = require('https');
+
+// --- Helper: Fetch JSON from URL ---
+function fetchJSON(url) {
+  return new Promise((resolve, reject) => {
+    https.get(url, {
+      headers: {
+        'User-Agent': 'Strike-App/1.0 (personal finance app)',
+        'Accept': 'application/json',
+      },
+      timeout: 8000,
+    }, (res) => {
+      let data = '';
+      res.on('data', chunk => { data += chunk; });
+      res.on('end', () => {
+        try { resolve(JSON.parse(data)); }
+        catch (e) { reject(new Error('JSON parse error')); }
+      });
+    }).on('error', reject).on('timeout', () => reject(new Error('Timeout')));
+  });
+}
+
+// --- Fetch live rates from dolarapi.com (free, no ban risk) ---
+exports.fetchLiveRates = async (req, res) => {
+  try {
+    const settingsResult = await db.query('SELECT settings FROM user_settings WHERE user_id = $1', [req.user.id]);
+    const currentSettings = settingsResult.rows[0]?.settings || {};
+    const currentRates = currentSettings.exchange_rates || {};
+
+    // Check cache: only fetch if last_live_fetch was > 24h ago (user-triggered button)
+    const lastFetch = currentRates.last_live_fetch ? new Date(currentRates.last_live_fetch) : null;
+    const hoursSinceLastFetch = lastFetch ? (Date.now() - lastFetch.getTime()) / (1000 * 60 * 60) : 999;
+
+    // Allow forced refresh if at least 1 hour has passed (anti-abuse)
+    if (hoursSinceLastFetch < 1) {
+      return res.json({
+        success: false,
+        message: 'Espera al menos 1 hora entre actualizaciones automáticas.',
+        rates: currentRates,
+      });
+    }
+
+    const [bcvData, paraleloData] = await Promise.allSettled([
+      fetchJSON('https://ve.dolarapi.com/v1/dolares/oficial'),
+      fetchJSON('https://ve.dolarapi.com/v1/dolares/paralelo'),
+    ]);
+
+    const newRates = { ...currentRates };
+    const updates = {};
+
+    if (bcvData.status === 'fulfilled' && bcvData.value?.promedio) {
+      newRates.usd_bs_bcv = parseFloat(bcvData.value.promedio.toFixed(2));
+      updates.bcv = { value: newRates.usd_bs_bcv, date: bcvData.value.fechaActualizacion };
+    }
+
+    if (paraleloData.status === 'fulfilled' && paraleloData.value?.promedio) {
+      newRates.usd_bs = parseFloat(paraleloData.value.promedio.toFixed(2));
+      updates.paralelo = { value: newRates.usd_bs, date: paraleloData.value.fechaActualizacion };
+    }
+
+    newRates.last_live_fetch = new Date().toISOString();
+
+    // Persist updated rates into user settings
+    const updatedSettings = { ...currentSettings, exchange_rates: newRates };
+    await db.query(
+      'INSERT INTO user_settings (user_id, settings, updated_at) VALUES ($1, $2, NOW()) ON CONFLICT (user_id) DO UPDATE SET settings = $2, updated_at = NOW()',
+      [req.user.id, JSON.stringify(updatedSettings)]
+    );
+
+    res.json({ success: true, rates: newRates, updates });
+  } catch (err) {
+    console.error('fetchLiveRates error:', err.message);
+    res.status(500).json({ error: 'Error al obtener tasas en vivo', detail: err.message });
+  }
+};
 
 exports.getFinanceData = async (req, res) => {
   try {
@@ -10,7 +85,7 @@ exports.getFinanceData = async (req, res) => {
       goals: goalsResult.rows,
       transactions: transactionsResult.rows,
       settings: settingsResult.rows[0]?.settings || { 
-        exchange_rates: { usd_bs: 65, usd_bs_bcv: 45, usd_cop: 4000, bs_cop: 5 },
+        exchange_rates: { usd_bs: 648, usd_bs_bcv: 474, usd_cop: 4200, bs_cop: 5, usdt_bs: 648 },
         budgets: {} 
       }
     });
@@ -65,7 +140,6 @@ exports.createTransaction = async (req, res) => {
   try {
     const { type, amount, currency, category, source, description, date, goal_id } = req.body;
     
-    // Start transaction to ensure data consistency if linking to a goal
     await db.query('BEGIN');
     
     const veDate = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Caracas" }));
@@ -74,11 +148,9 @@ exports.createTransaction = async (req, res) => {
       [req.user.id, type, amount, currency || 'USD', category, source || '', description || '', date || veDate, goal_id || null]
     );
 
-    // If it's linked to a goal, we update the goal amount
     if (goal_id) {
-      // Get current exchange rates to convert to USD (base currency for goals)
       const settingsResult = await db.query('SELECT settings FROM user_settings WHERE user_id = $1', [req.user.id]);
-      const rates = settingsResult.rows[0]?.settings?.exchange_rates || { usd_bs: 65, usd_bs_bcv: 45, usd_cop: 4000, bs_cop: 5 };
+      const rates = settingsResult.rows[0]?.settings?.exchange_rates || { usd_bs: 648, usd_bs_bcv: 474, usd_cop: 4200, bs_cop: 5 };
       
       let amountInUSD = amount;
       if (currency !== 'USD') {
@@ -86,7 +158,6 @@ exports.createTransaction = async (req, res) => {
         amountInUSD = amount / rate;
       }
 
-      // If it's a goal_withdrawal, we subtract from the goal (internal move)
       const updateOp = (type === 'income' || type === 'saving') ? '+' : '-';
       await db.query(
         `UPDATE savings_goals SET current_amount = current_amount ${updateOp} $1 WHERE id = $2 AND user_id = $3`,
@@ -116,7 +187,6 @@ exports.deleteTransaction = async (req, res) => {
     
     const trans = transResult.rows[0];
     if (trans.goal_id) {
-      // Revert the amount from the goal
       const amountToRevert = (trans.type === 'income' || trans.type === 'saving') ? -trans.amount : trans.amount;
       await db.query(
         'UPDATE savings_goals SET current_amount = current_amount + $1 WHERE id = $2 AND user_id = $3',
@@ -141,7 +211,6 @@ exports.updateTransaction = async (req, res) => {
     
     await db.query('BEGIN');
 
-    // 1. Get old transaction to revert its effect on goal if necessary
     const oldRes = await db.query('SELECT * FROM transactions WHERE id = $1 AND user_id = $2', [id, req.user.id]);
     if (oldRes.rows.length === 0) {
       await db.query('ROLLBACK');
@@ -149,25 +218,21 @@ exports.updateTransaction = async (req, res) => {
     }
     const oldTx = oldRes.rows[0];
 
-    // Get rates for conversion
     const settingsResult = await db.query('SELECT settings FROM user_settings WHERE user_id = $1', [req.user.id]);
-    const rates = settingsResult.rows[0]?.settings?.exchange_rates || { usd_bs: 65, usd_bs_bcv: 45, usd_cop: 4000, bs_cop: 5 };
+    const rates = settingsResult.rows[0]?.settings?.exchange_rates || { usd_bs: 648, usd_bs_bcv: 474, usd_cop: 4200, bs_cop: 5 };
 
-    // 2. Revert old goal impact
     if (oldTx.goal_id) {
       const oldAmountInUSD = oldTx.currency === 'USD' ? oldTx.amount : oldTx.amount / (rates[oldTx.currency] || 1);
       const revertOp = (oldTx.type === 'income' || oldTx.type === 'saving') ? '-' : '+';
       await db.query(`UPDATE savings_goals SET current_amount = current_amount ${revertOp} $1 WHERE id = $2`, [oldAmountInUSD, oldTx.goal_id]);
     }
 
-    // 3. Apply new goal impact
     if (goal_id) {
       const newAmountInUSD = currency === 'USD' ? amount : amount / (rates[currency] || 1);
       const applyOp = (type === 'income' || type === 'saving') ? '+' : '-';
       await db.query(`UPDATE savings_goals SET current_amount = current_amount ${applyOp} $1 WHERE id = $2`, [newAmountInUSD, goal_id]);
     }
 
-    // 4. Update transaction record
     const updatedTx = await db.query(
       'UPDATE transactions SET type = $1, amount = $2, currency = $3, category = $4, source = $5, description = $6, date = $7, goal_id = $8 WHERE id = $9 AND user_id = $10 RETURNING *',
       [type, amount, currency, category, source, description, date, goal_id, id, req.user.id]
@@ -199,7 +264,6 @@ exports.updateSettings = async (req, res) => {
 exports.deleteAllTransactions = async (req, res) => {
   try {
     await db.query('DELETE FROM transactions WHERE user_id = $1', [req.user.id]);
-    // Reset goal amounts if needed? The user wants to restart, so we should probably reset goal current_amount too
     await db.query('UPDATE savings_goals SET current_amount = 0 WHERE user_id = $1', [req.user.id]);
     res.json({ message: 'Todos los movimientos eliminados y metas reiniciadas' });
   } catch (err) {
@@ -211,7 +275,6 @@ exports.deleteAllTransactions = async (req, res) => {
 exports.deleteAllGoals = async (req, res) => {
   try {
     await db.query('DELETE FROM savings_goals WHERE user_id = $1', [req.user.id]);
-    // Also remove links in transactions?
     await db.query('UPDATE transactions SET goal_id = NULL WHERE user_id = $1', [req.user.id]);
     res.json({ message: 'Todas las metas eliminadas' });
   } catch (err) {
