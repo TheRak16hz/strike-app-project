@@ -150,7 +150,7 @@ export default function FinanceRates({ rates, onSaveRates }) {
     try {
       const result = await financeService.fetchLiveRates();
       if (result.rates) {
-        onSaveRates(result.rates);
+        onSaveRates({ ...rates, ...result.rates });
         setFetchMsg({
           type: 'ok',
           text: result.success
